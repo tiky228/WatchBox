@@ -1,8 +1,14 @@
-name: TestPlugin
+name: RoleMarkTest
 main: TestPlugin
-version: 1.0.0
+version: 1.0.1
 api-version: 1.20
 commands:
-  testplugin:
-    description: Simple test command to verify the plugin works.
-    usage: /testplugin
+  dbgrole:
+    description: Debug command to set or get player roles.
+    usage: /dbgrole set <player> <murderer|innocent> | /dbgrole get [player]
+  dbgweapon:
+    description: Debug command to give the murderer marking weapon.
+    usage: /dbgweapon [player]
+  dbghighlight:
+    description: Highlight players by role or marked entities.
+    usage: /dbghighlight role <murderer|innocent> | /dbghighlight marked

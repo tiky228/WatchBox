@@ -40,14 +40,15 @@ public class MurdererWeaponListener implements Listener {
             return;
         }
 
+        // Limit targeting to entities within one block directly in front of the player.
         Entity target = player.getTargetEntity(1);
         if (!(target instanceof LivingEntity living) || target.equals(player)) {
             player.sendMessage(Component.text("No valid living target found in front of you.", NamedTextColor.GRAY));
             return;
         }
 
-        double distance = player.getEyeLocation().distance(living.getLocation());
-        if (distance > 1.0) {
+        double distanceSquared = player.getLocation().distanceSquared(living.getLocation());
+        if (distanceSquared > 1.0) {
             player.sendMessage(Component.text("Target is too far away to mark (must be within 1 block).", NamedTextColor.RED));
             return;
         }

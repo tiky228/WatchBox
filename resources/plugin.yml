@@ -1,0 +1,8 @@
+name: TestPlugin
+main: TestPlugin
+version: 1.0.0
+api-version: 1.20
+commands:
+  testplugin:
+    description: Simple test command to verify the plugin works.
+    usage: /testplugin

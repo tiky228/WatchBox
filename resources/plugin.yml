@@ -1,6 +1,6 @@
-name: RoleMarkTest
+name: BlackFlashPlugin
 main: TestPlugin
-version: 1.0.1
+version: 1.1.0
 api-version: 1.20
 commands:
   dbgrole:
@@ -12,3 +12,6 @@ commands:
   dbghighlight:
     description: Highlight players by role or marked entities.
     usage: /dbghighlight role <murderer|innocent> | /dbghighlight marked
+  blackflash:
+    description: Debug command for the Black Flash ability.
+    usage: /blackflash give [player]

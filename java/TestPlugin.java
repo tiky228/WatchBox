@@ -10,6 +10,7 @@ public class TestPlugin extends JavaPlugin {
     private TaskManager taskManager;
     private RoundManager roundManager;
     private ManiacAbilityManager abilityManager;
+    private MurdererWeapon murdererWeapon;
 
     @Override
     public void onEnable() {
@@ -18,6 +19,7 @@ public class TestPlugin extends JavaPlugin {
         markManager = new MarkManager();
         silenceManager = new SilenceManager();
         abilityManager = new ManiacAbilityManager();
+        murdererWeapon = new MurdererWeapon();
         taskManager = new TaskManager(this, roleManager, markManager);
         taskManager.loadFromConfig(getConfig());
         roundManager = new RoundManager(this, roleManager, markManager, taskManager);
@@ -46,6 +48,7 @@ public class TestPlugin extends JavaPlugin {
         getServer().getPluginManager().registerEvents(new SignListener(silenceManager, logSigns), this);
         getServer().getPluginManager().registerEvents(new TaskListener(taskManager), this);
         getServer().getPluginManager().registerEvents(new PlayerJoinListener(taskManager), this);
+        getServer().getPluginManager().registerEvents(new MurdererWeaponListener(this, roleManager, markManager, murdererWeapon), this);
 
         getLogger().info("Watchbox Maniac test plugin enabled.");
     }

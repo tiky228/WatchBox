@@ -1,14 +1,14 @@
-name: RoleMarkTest
+name: WatchboxManiacTest
 main: TestPlugin
-version: 1.0.1
+version: 1.0.0
 api-version: 1.20
 commands:
-  dbgrole:
-    description: Debug command to set or get player roles.
-    usage: /dbgrole set <player> <murderer|innocent> | /dbgrole get [player]
-  dbgweapon:
-    description: Debug command to give the murderer marking weapon.
-    usage: /dbgweapon [player]
-  dbghighlight:
-    description: Highlight players by role or marked entities.
-    usage: /dbghighlight role <murderer|innocent> | /dbghighlight marked
+  maniacdebug:
+    description: Debug control for Maniac round
+    usage: /maniacdebug <subcommand>
+  role:
+    description: Assign or view roles
+    usage: /role set <player> <MANIAC|CIVILIAN> | /role get <player>
+  round:
+    description: View or edit round timing
+    usage: /round info | /round time <seconds>

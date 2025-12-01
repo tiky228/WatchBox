@@ -1,7 +1,7 @@
 /**
- * Simple role enumeration used to tag players in memory.
+ * Roles available in the test game mode.
  */
 public enum Role {
-    MURDERER,
-    INNOCENT
+    MANIAC,
+    CIVILIAN
 }

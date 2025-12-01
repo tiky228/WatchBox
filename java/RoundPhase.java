@@ -5,5 +5,6 @@ public enum RoundPhase {
     LOBBY,
     ACTION,
     DISCUSSION,
+    VOTING,
     ENDED
 }

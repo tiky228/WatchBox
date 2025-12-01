@@ -9,11 +9,13 @@ import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
+import org.bukkit.plugin.java.JavaPlugin;
 
 /**
  * Command entrypoint for Maniac utilities (voting books, killer sign, abilities).
  */
 public class ManiacCommand implements CommandExecutor {
+    private final JavaPlugin plugin;
     private final RoleManager roleManager;
     private final SilenceManager silenceManager;
     private final ManiacAbilityManager abilityManager;
@@ -22,9 +24,10 @@ public class ManiacCommand implements CommandExecutor {
     private final KillerSignListener killerSignListener;
     private final long silenceDuration;
 
-    public ManiacCommand(RoleManager roleManager, SilenceManager silenceManager,
+    public ManiacCommand(JavaPlugin plugin, RoleManager roleManager, SilenceManager silenceManager,
                          ManiacAbilityManager abilityManager, VoteManager voteManager,
                          KillerSignItem killerSignItem, KillerSignListener killerSignListener, long silenceDuration) {
+        this.plugin = plugin;
         this.roleManager = roleManager;
         this.silenceManager = silenceManager;
         this.abilityManager = abilityManager;
@@ -154,7 +157,7 @@ public class ManiacCommand implements CommandExecutor {
             return true;
         }
         Player target = Bukkit.getPlayer(args[1]);
-        if (target == null || target.getGameMode() == GameMode.SPECTATOR) {
+        if (target == null || target.getGameMode() == GameMode.SPECTATOR || target.isDead()) {
             player.sendMessage(Component.text("Invalid target.", NamedTextColor.RED));
             return true;
         }
@@ -162,12 +165,15 @@ public class ManiacCommand implements CommandExecutor {
             player.sendMessage(Component.text("Target is in another world.", NamedTextColor.RED));
             return true;
         }
-        Location playerLoc = player.getLocation();
-        Location targetLoc = target.getLocation();
-        player.teleport(targetLoc);
-        target.teleport(playerLoc);
-        player.sendMessage(Component.text("You swapped places with " + target.getName() + "!", NamedTextColor.AQUA));
-        target.sendMessage(Component.text("The Maniac swapped places with you!", NamedTextColor.RED));
+        Location playerLoc = player.getLocation().clone();
+        Location targetLoc = target.getLocation().clone();
+        Bukkit.getScheduler().runTask(plugin, () -> {
+            player.teleport(targetLoc);
+            target.teleport(playerLoc);
+            player.setFallDistance(0f);
+            target.setFallDistance(0f);
+        });
+        player.sendMessage(Component.text("Swap ability activated.", NamedTextColor.AQUA));
         return true;
     }
 }

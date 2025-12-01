@@ -11,6 +11,7 @@ import org.bukkit.plugin.java.JavaPlugin;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -38,7 +39,41 @@ public class VoteManager {
         distributeVotingBooks();
     }
 
+    public void concludeVoting() {
+        Map<UUID, Long> counts = votes.values().stream()
+                .collect(Collectors.groupingBy(id -> id, Collectors.counting()));
+
+        Map<UUID, Long> tallied = new LinkedHashMap<>();
+        getAlivePlayers().forEach(player -> tallied.put(player.getUniqueId(), 0L));
+        counts.forEach((uuid, count) -> tallied.merge(uuid, count, Long::sum));
+
+        Bukkit.broadcast(Component.text("Voting results:", NamedTextColor.GOLD));
+        tallied.entrySet().stream()
+                .sorted(Comparator.comparing(entry -> getNameFor(entry.getKey())))
+                .forEach(entry -> Bukkit.broadcast(Component.text(
+                        getNameFor(entry.getKey()) + " - " + entry.getValue() + " vote" + (entry.getValue() == 1 ? "" : "s"),
+                        NamedTextColor.GRAY)));
+
+        clearVotingBooks();
+        Optional<UUID> eliminationTarget = determineEliminationTarget(tallied);
+        votes.clear();
+
+        if (eliminationTarget.isEmpty()) {
+            Bukkit.broadcast(Component.text("Voting ended with no elimination.", NamedTextColor.GRAY));
+            return;
+        }
+
+        Player target = Bukkit.getPlayer(eliminationTarget.get());
+        if (target == null) {
+            Bukkit.broadcast(Component.text("Top voted player is no longer online.", NamedTextColor.GRAY));
+            return;
+        }
+        target.setGameMode(GameMode.SPECTATOR);
+        Bukkit.broadcast(Component.text(target.getName() + " was eliminated by vote!", NamedTextColor.RED));
+    }
+
     public void endVoting() {
+        votes.clear();
         clearVotingBooks();
     }
 
@@ -74,6 +109,30 @@ public class VoteManager {
         return true;
     }
 
+    private Optional<UUID> determineEliminationTarget(Map<UUID, Long> tallied) {
+        if (tallied.isEmpty()) {
+            return Optional.empty();
+        }
+        long maxVotes = -1;
+        UUID top = null;
+        boolean tie = false;
+
+        for (Map.Entry<UUID, Long> entry : tallied.entrySet()) {
+            if (entry.getValue() > maxVotes) {
+                maxVotes = entry.getValue();
+                top = entry.getKey();
+                tie = false;
+            } else if (entry.getValue() == maxVotes) {
+                tie = true; // Tie means no elimination.
+            }
+        }
+
+        if (top == null || tie || maxVotes <= 0) {
+            return Optional.empty();
+        }
+        return Optional.of(top);
+    }
+
     public Optional<Player> getTopVotedPlayer() {
         if (votes.isEmpty()) {
             return Optional.empty();
@@ -97,17 +156,6 @@ public class VoteManager {
         return Optional.ofNullable(player);
     }
 
-    public void eliminateTopVoted() {
-        Optional<Player> top = getTopVotedPlayer();
-        if (top.isEmpty()) {
-            Bukkit.broadcast(Component.text("Voting ended with no elimination.", NamedTextColor.GRAY));
-            return;
-        }
-        Player target = top.get();
-        target.setGameMode(GameMode.SPECTATOR);
-        Bukkit.broadcast(Component.text(target.getName() + " was eliminated by vote!", NamedTextColor.RED));
-    }
-
     public void removeVotingBook(Player player) {
         for (ItemStack item : player.getInventory().getContents()) {
             if (votingBookFactory.isVotingBook(item)) {
@@ -118,6 +166,11 @@ public class VoteManager {
 
     public boolean isVotingBook(ItemStack itemStack) {
         return votingBookFactory.isVotingBook(itemStack);
+    }
+
+    private String getNameFor(UUID uuid) {
+        Player player = Bukkit.getPlayer(uuid);
+        return player != null ? player.getName() : uuid.toString();
     }
 
     private Collection<Player> getAlivePlayers() {

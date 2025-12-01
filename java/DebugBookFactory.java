@@ -65,25 +65,25 @@ public class DebugBookFactory {
     private Component buildStatePage() {
         TextComponent.Builder builder = Component.text();
         builder.append(Component.text("Game State", NamedTextColor.GOLD)).append(Component.newline());
-        builder.append(Component.text("Phase: " + roundManager.getCurrentPhase(), NamedTextColor.YELLOW)).append(Component.newline());
-        builder.append(Component.text("Time Left: " + roundManager.getRemainingSeconds() + "s", NamedTextColor.YELLOW)).append(Component.newline());
+        builder.append(Component.text("Phase: " + roundManager.getCurrentPhase(), NamedTextColor.AQUA)).append(Component.newline());
+        builder.append(Component.text("Time Left: " + roundManager.getRemainingSeconds() + "s", NamedTextColor.AQUA)).append(Component.newline());
         builder.append(Component.newline());
 
         builder.append(Component.text("Alive Civilians:", NamedTextColor.GREEN)).append(Component.newline());
         for (String civilian : getPlayersByRole(Role.CIVILIAN)) {
-            builder.append(Component.text("- " + civilian, NamedTextColor.WHITE)).append(Component.newline());
+            builder.append(Component.text("- " + civilian, NamedTextColor.GRAY)).append(Component.newline());
         }
         builder.append(Component.newline());
 
         builder.append(Component.text("Alive Maniacs:", NamedTextColor.RED)).append(Component.newline());
         for (String maniac : getPlayersByRole(Role.MANIAC)) {
-            builder.append(Component.text("- " + maniac, NamedTextColor.WHITE)).append(Component.newline());
+            builder.append(Component.text("- " + maniac, NamedTextColor.GRAY)).append(Component.newline());
         }
         builder.append(Component.newline());
 
         builder.append(Component.text("Spectators / Dead:", NamedTextColor.GRAY)).append(Component.newline());
         for (String dead : getSpectators()) {
-            builder.append(Component.text("- " + dead, NamedTextColor.WHITE)).append(Component.newline());
+            builder.append(Component.text("- " + dead, NamedTextColor.GRAY)).append(Component.newline());
         }
         return builder.build();
     }
@@ -93,16 +93,16 @@ public class DebugBookFactory {
         builder.append(Component.text("Round Controls", NamedTextColor.GOLD)).append(Component.newline());
         builder.append(clickable("Start", "/maniacdebug start", NamedTextColor.GREEN)).append(Component.newline());
         builder.append(clickable("Stop", "/maniacdebug stop", NamedTextColor.RED)).append(Component.newline());
-        builder.append(clickable("Next Phase", "/maniacdebug nextphase", NamedTextColor.AQUA)).append(Component.newline());
+        builder.append(clickable("Next Phase", "/maniacdebug nextphase", NamedTextColor.DARK_AQUA)).append(Component.newline());
         return builder.build();
     }
 
     private Component buildPhaseControlPage() {
         TextComponent.Builder builder = Component.text();
         builder.append(Component.text("Phase Overrides", NamedTextColor.GOLD)).append(Component.newline());
-        builder.append(clickable("ACTION", "/maniacdebug phase action", NamedTextColor.YELLOW)).append(Component.newline());
-        builder.append(clickable("DISCUSSION", "/maniacdebug phase discussion", NamedTextColor.YELLOW)).append(Component.newline());
-        builder.append(clickable("VOTING", "/maniacdebug phase voting", NamedTextColor.YELLOW)).append(Component.newline());
+        builder.append(clickable("ACTION", "/maniacdebug phase action", NamedTextColor.GOLD)).append(Component.newline());
+        builder.append(clickable("DISCUSSION", "/maniacdebug phase discussion", NamedTextColor.GOLD)).append(Component.newline());
+        builder.append(clickable("VOTING", "/maniacdebug phase voting", NamedTextColor.GOLD)).append(Component.newline());
         builder.append(Component.newline());
         builder.append(clickable("Give Voting Book", "/maniac votebook", NamedTextColor.AQUA));
         return builder.build();
@@ -114,7 +114,7 @@ public class DebugBookFactory {
         builder.append(clickable("List Marks", "/maniacdebug listmarks", NamedTextColor.AQUA)).append(Component.newline());
         builder.append(Component.text("Add mark to player:", NamedTextColor.GRAY)).append(Component.newline());
         for (Player player : Bukkit.getOnlinePlayers()) {
-            builder.append(clickable(player.getName(), "/maniacdebug mark " + player.getName(), NamedTextColor.WHITE)).append(Component.newline());
+            builder.append(clickable(player.getName(), "/maniacdebug mark " + player.getName(), NamedTextColor.GRAY)).append(Component.newline());
         }
         builder.append(Component.newline());
         builder.append(Component.text("Clear / Empowered:", NamedTextColor.GRAY)).append(Component.newline());

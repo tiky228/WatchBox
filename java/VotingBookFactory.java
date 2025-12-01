@@ -61,7 +61,7 @@ public class VotingBookFactory {
         TextComponent.Builder current = Component.text();
         int lines = 0;
         for (Player target : voteTargets) {
-            current.append(Component.text(target.getName() + " - ", NamedTextColor.WHITE))
+            current.append(Component.text(target.getName() + " - ", NamedTextColor.GRAY))
                     .append(Component.text("[VOTE]", NamedTextColor.RED)
                             .clickEvent(ClickEvent.runCommand("/vote " + target.getName())));
             current.append(Component.newline());

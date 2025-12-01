@@ -5,6 +5,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
+import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.BookMeta;
 import org.bukkit.inventory.meta.ItemMeta;
@@ -16,107 +17,127 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 /**
- * Builds the debug control book content.
+ * Generates a debug control book with live state and command shortcuts.
  */
 public class DebugBookFactory {
-    private final JavaPlugin plugin;
     private final RoleManager roleManager;
     private final RoundManager roundManager;
-    private final MarkManager markManager;
-    private final NamespacedKey key;
+    private final NamespacedKey debugKey;
 
     public DebugBookFactory(JavaPlugin plugin, RoleManager roleManager, RoundManager roundManager, MarkManager markManager) {
-        this.plugin = plugin;
         this.roleManager = roleManager;
         this.roundManager = roundManager;
-        this.markManager = markManager;
-        this.key = new NamespacedKey(plugin, "debug_book");
+        this.debugKey = new NamespacedKey(plugin, "debug_book");
     }
 
     public ItemStack createDebugBook() {
-        ItemStack stack = new ItemStack(Material.WRITTEN_BOOK);
-        BookMeta meta = (BookMeta) stack.getItemMeta();
-        meta.title(Component.text("Book of Debug Control", NamedTextColor.GOLD));
-        meta.author(Component.text("Watchbox"));
-        meta.addPages(buildStatePage(), buildControlPage(), buildMarksPage());
-        meta.getPersistentDataContainer().set(key, PersistentDataType.BYTE, (byte) 1);
-        stack.setItemMeta(meta);
-        return stack;
+        ItemStack book = new ItemStack(Material.WRITTEN_BOOK);
+        BookMeta meta = (BookMeta) book.getItemMeta();
+        meta.title(Component.text("Debug Controls", NamedTextColor.GOLD));
+        meta.author(Component.text("WatchBox"));
+
+        List<Component> pages = new ArrayList<>();
+        pages.add(buildStatePage());
+        pages.add(buildRoundControlPage());
+        pages.add(buildPhaseControlPage());
+        pages.add(buildMarkPage());
+        meta.pages(pages);
+
+        meta.getPersistentDataContainer().set(debugKey, PersistentDataType.BYTE, (byte) 1);
+        book.setItemMeta(meta);
+        return book;
     }
 
-    public boolean isDebugBook(ItemStack itemStack) {
-        if (itemStack == null) {
+    public boolean isDebugBook(ItemStack stack) {
+        if (stack == null) {
             return false;
         }
-        ItemMeta meta = itemStack.getItemMeta();
+        ItemMeta meta = stack.getItemMeta();
         if (meta == null) {
             return false;
         }
-        return meta.getPersistentDataContainer().has(key, PersistentDataType.BYTE);
+        return meta.getPersistentDataContainer().has(debugKey, PersistentDataType.BYTE);
     }
 
     private Component buildStatePage() {
-        Component.Builder builder = Component.text().color(NamedTextColor.DARK_AQUA);
+        Component.Builder builder = Component.text();
         builder.append(Component.text("Game State", NamedTextColor.GOLD)).append(Component.newline());
         builder.append(Component.text("Phase: " + roundManager.getCurrentPhase(), NamedTextColor.YELLOW)).append(Component.newline());
-        builder.append(Component.text("Remaining: " + roundManager.getRemainingSeconds() + "s", NamedTextColor.YELLOW)).append(Component.newline());
+        builder.append(Component.text("Time Left: " + roundManager.getRemainingSeconds() + "s", NamedTextColor.YELLOW)).append(Component.newline());
         builder.append(Component.newline());
-        builder.append(Component.text("Civilians:", NamedTextColor.GREEN)).append(Component.newline());
-        for (String name : getPlayersByRole(Role.CIVILIAN)) {
-            builder.append(Component.text("- " + name, NamedTextColor.WHITE)).append(Component.newline());
+
+        builder.append(Component.text("Alive Civilians:", NamedTextColor.GREEN)).append(Component.newline());
+        for (String civilian : getPlayersByRole(Role.CIVILIAN)) {
+            builder.append(Component.text("- " + civilian, NamedTextColor.WHITE)).append(Component.newline());
         }
-        builder.append(Component.text("Maniacs:", NamedTextColor.RED)).append(Component.newline());
-        for (String name : getPlayersByRole(Role.MANIAC)) {
-            builder.append(Component.text("- " + name, NamedTextColor.WHITE)).append(Component.newline());
+        builder.append(Component.newline());
+
+        builder.append(Component.text("Alive Maniacs:", NamedTextColor.RED)).append(Component.newline());
+        for (String maniac : getPlayersByRole(Role.MANIAC)) {
+            builder.append(Component.text("- " + maniac, NamedTextColor.WHITE)).append(Component.newline());
         }
-        builder.append(Component.text("Dead/Spectators:", NamedTextColor.GRAY)).append(Component.newline());
-        for (String name : getSpectators()) {
-            builder.append(Component.text("- " + name, NamedTextColor.WHITE)).append(Component.newline());
+        builder.append(Component.newline());
+
+        builder.append(Component.text("Spectators / Dead:", NamedTextColor.GRAY)).append(Component.newline());
+        for (String dead : getSpectators()) {
+            builder.append(Component.text("- " + dead, NamedTextColor.WHITE)).append(Component.newline());
+        }
+        return builder.build();
+    }
+
+    private Component buildRoundControlPage() {
+        Component.Builder builder = Component.text();
+        builder.append(Component.text("Round Controls", NamedTextColor.GOLD)).append(Component.newline());
+        builder.append(clickable("Start", "/maniacdebug start", NamedTextColor.GREEN)).append(Component.newline());
+        builder.append(clickable("Stop", "/maniacdebug stop", NamedTextColor.RED)).append(Component.newline());
+        builder.append(clickable("Next Phase", "/maniacdebug nextphase", NamedTextColor.AQUA)).append(Component.newline());
+        return builder.build();
+    }
+
+    private Component buildPhaseControlPage() {
+        Component.Builder builder = Component.text();
+        builder.append(Component.text("Phase Overrides", NamedTextColor.GOLD)).append(Component.newline());
+        builder.append(clickable("ACTION", "/maniacdebug phase action", NamedTextColor.YELLOW)).append(Component.newline());
+        builder.append(clickable("DISCUSSION", "/maniacdebug phase discussion", NamedTextColor.YELLOW)).append(Component.newline());
+        builder.append(clickable("VOTING", "/maniacdebug phase voting", NamedTextColor.YELLOW)).append(Component.newline());
+        builder.append(Component.newline());
+        builder.append(clickable("Give Voting Book", "/maniac votebook", NamedTextColor.AQUA));
+        return builder.build();
+    }
+
+    private Component buildMarkPage() {
+        Component.Builder builder = Component.text();
+        builder.append(Component.text("Marks & Debug", NamedTextColor.GOLD)).append(Component.newline());
+        builder.append(clickable("List Marks", "/maniacdebug listmarks", NamedTextColor.AQUA)).append(Component.newline());
+        builder.append(Component.text("Add mark to player:", NamedTextColor.GRAY)).append(Component.newline());
+        for (Player player : Bukkit.getOnlinePlayers()) {
+            builder.append(clickable(player.getName(), "/maniacdebug mark " + player.getName(), NamedTextColor.WHITE)).append(Component.newline());
+        }
+        builder.append(Component.newline());
+        builder.append(Component.text("Clear / Empowered:", NamedTextColor.GRAY)).append(Component.newline());
+        for (Player player : Bukkit.getOnlinePlayers()) {
+            builder.append(clickable("Clear " + player.getName(), "/maniacdebug clearmarks " + player.getName(), NamedTextColor.RED)).append(Component.newline());
+            builder.append(clickable("Empower " + player.getName(), "/maniacdebug emark " + player.getName(), NamedTextColor.LIGHT_PURPLE)).append(Component.newline());
         }
         return builder.build();
     }
 
     private List<String> getPlayersByRole(Role role) {
         return Bukkit.getOnlinePlayers().stream()
-                .filter(p -> p.getGameMode() != GameMode.SPECTATOR)
+                .filter(p -> p.getGameMode() != GameMode.SPECTATOR && !p.isDead())
                 .filter(p -> roleManager.getRole(p) == role)
-                .map(player -> player.getName())
+                .map(Player::getName)
                 .collect(Collectors.toList());
     }
 
     private List<String> getSpectators() {
-        List<String> list = new ArrayList<>();
-        Bukkit.getOnlinePlayers().forEach(player -> {
+        List<String> spectators = new ArrayList<>();
+        for (Player player : Bukkit.getOnlinePlayers()) {
             if (player.getGameMode() == GameMode.SPECTATOR || player.isDead()) {
-                list.add(player.getName());
+                spectators.add(player.getName());
             }
-        });
-        return list;
-    }
-
-    private Component buildControlPage() {
-        Component.Builder builder = Component.text();
-        builder.append(Component.text("Round Controls", NamedTextColor.GOLD)).append(Component.newline());
-        builder.append(clickable("Start round", "/maniacdebug start", NamedTextColor.GREEN)).append(Component.newline());
-        builder.append(clickable("Stop round", "/maniacdebug stop", NamedTextColor.RED)).append(Component.newline());
-        builder.append(clickable("Next phase", "/maniacdebug nextphase", NamedTextColor.AQUA)).append(Component.newline());
-        builder.append(clickable("Set ACTION", "/maniacdebug phase action", NamedTextColor.YELLOW)).append(Component.newline());
-        builder.append(clickable("Set DISCUSSION", "/maniacdebug phase discussion", NamedTextColor.YELLOW)).append(Component.newline());
-        builder.append(clickable("Set VOTING", "/maniacdebug phase voting", NamedTextColor.YELLOW)).append(Component.newline());
-        return builder.build();
-    }
-
-    private Component buildMarksPage() {
-        Component.Builder builder = Component.text();
-        builder.append(Component.text("Marks / Roles", NamedTextColor.GOLD)).append(Component.newline());
-        builder.append(Component.text("Click to view marked players.", NamedTextColor.YELLOW)).append(Component.newline());
-        builder.append(clickable("List marked", "/maniacdebug listmarks", NamedTextColor.AQUA)).append(Component.newline());
-        builder.append(Component.newline());
-        builder.append(Component.text("Add mark to online player:", NamedTextColor.GRAY)).append(Component.newline());
-        Bukkit.getOnlinePlayers().forEach(player -> {
-            builder.append(clickable(player.getName(), "/maniacdebug mark " + player.getName(), NamedTextColor.WHITE)).append(Component.newline());
-        });
-        return builder.build();
+        }
+        return spectators;
     }
 
     private Component clickable(String label, String command, NamedTextColor color) {

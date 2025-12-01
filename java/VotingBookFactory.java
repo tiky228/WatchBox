@@ -1,6 +1,7 @@
 package com.watchbox.maniac;
 
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.TextComponent;
 import net.kyori.adventure.text.event.ClickEvent;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Material;
@@ -57,7 +58,7 @@ public class VotingBookFactory {
 
     private List<Component> buildTargetPages(Collection<Player> voteTargets) {
         List<Component> pages = new ArrayList<>();
-        Component.Builder current = Component.text();
+        TextComponent.Builder current = Component.text();
         int lines = 0;
         for (Player target : voteTargets) {
             current.append(Component.text(target.getName() + " - ", NamedTextColor.WHITE))

@@ -176,7 +176,7 @@ public class VoteManager {
     private Collection<Player> getAlivePlayers() {
         return Bukkit.getOnlinePlayers().stream()
                 .filter(p -> p.getGameMode() != GameMode.SPECTATOR)
-                .filter(p -> !roleManager.isManiac(p))
+                .filter(p -> !p.isDead())
                 .collect(Collectors.toList());
     }
 

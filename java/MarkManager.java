@@ -12,9 +12,9 @@ import java.util.UUID;
  * Tracks normal and empowered marks on players.
  */
 public class MarkManager {
-    private static class MarkCounts {
-        int normal;
-        int empowered;
+    public static class MarkCounts {
+        public int normal;
+        public int empowered;
     }
 
     private final Map<UUID, MarkCounts> marks = new HashMap<>();

@@ -17,6 +17,7 @@ public class RoundManager {
     private final RoleManager roleManager;
     private final MarkManager markManager;
     private final TaskManager taskManager;
+    private VoteManager voteManager;
 
     private RoundPhase currentPhase = RoundPhase.LOBBY;
     private int remainingSeconds = 0;
@@ -24,6 +25,7 @@ public class RoundManager {
 
     private int actionPhaseDuration;
     private int discussionPhaseDuration;
+    private int votingPhaseDuration;
     private int maxMarksBeforeDeath;
 
     public RoundManager(JavaPlugin plugin, RoleManager roleManager, MarkManager markManager, TaskManager taskManager) {
@@ -34,9 +36,14 @@ public class RoundManager {
         reloadDurations();
     }
 
+    public void setVoteManager(VoteManager voteManager) {
+        this.voteManager = voteManager;
+    }
+
     public void reloadDurations() {
         actionPhaseDuration = plugin.getConfig().getInt("actionPhaseDuration", 120);
         discussionPhaseDuration = plugin.getConfig().getInt("discussionPhaseDuration", 60);
+        votingPhaseDuration = plugin.getConfig().getInt("votingPhaseDuration", 45);
         maxMarksBeforeDeath = plugin.getConfig().getInt("maxMarksBeforeDeath", 3);
     }
 
@@ -45,6 +52,9 @@ public class RoundManager {
         roleManager.clear();
         markManager.clearAll();
         taskManager.resetLanterns();
+        if (voteManager != null) {
+            voteManager.endVoting();
+        }
         assignRoles();
         giveStartingSigns();
         setPhase(RoundPhase.ACTION, actionPhaseDuration);
@@ -77,11 +87,18 @@ public class RoundManager {
     }
 
     private void setPhase(RoundPhase phase, int durationSeconds) {
+        if (currentPhase == RoundPhase.VOTING && phase != RoundPhase.VOTING && voteManager != null) {
+            voteManager.endVoting();
+            voteManager.eliminateTopVoted();
+        }
         currentPhase = phase;
         remainingSeconds = durationSeconds;
         plugin.getLogger().info("Phase set to " + phase + " for " + remainingSeconds + "s.");
         Bukkit.broadcast(Component.text("Phase: " + phase + " (" + remainingSeconds + "s)", NamedTextColor.LIGHT_PURPLE));
-        if (phase == RoundPhase.ACTION || phase == RoundPhase.DISCUSSION) {
+        if (phase == RoundPhase.VOTING && voteManager != null) {
+            voteManager.startVoting();
+        }
+        if (phase == RoundPhase.ACTION || phase == RoundPhase.DISCUSSION || phase == RoundPhase.VOTING) {
             startTimer();
         }
     }
@@ -95,7 +112,7 @@ public class RoundManager {
         }, 20L, 20L);
     }
 
-    private void advancePhase() {
+    public void advancePhase() {
         cancelTimer();
         if (currentPhase == RoundPhase.ACTION) {
             resolveMarks();
@@ -103,11 +120,15 @@ public class RoundManager {
             return;
         }
         if (currentPhase == RoundPhase.DISCUSSION) {
-            setPhase(RoundPhase.ENDED, 0);
+            setPhase(RoundPhase.VOTING, votingPhaseDuration);
             return;
         }
         if (currentPhase == RoundPhase.LOBBY) {
             setPhase(RoundPhase.ACTION, actionPhaseDuration);
+            return;
+        }
+        if (currentPhase == RoundPhase.VOTING) {
+            setPhase(RoundPhase.ENDED, 0);
         }
     }
 
@@ -138,6 +159,9 @@ public class RoundManager {
         cancelTimer();
         currentPhase = RoundPhase.ENDED;
         remainingSeconds = 0;
+        if (voteManager != null) {
+            voteManager.endVoting();
+        }
         Bukkit.broadcast(Component.text("Round ended.", NamedTextColor.GRAY));
     }
 

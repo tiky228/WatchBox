@@ -1,6 +1,7 @@
 # Round timings (in seconds)
 actionPhaseDuration: 120
 discussionPhaseDuration: 60
+votingPhaseDuration: 45
 
 # Mark mechanics
 maxMarksBeforeDeath: 3

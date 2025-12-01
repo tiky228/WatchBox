@@ -1,3 +1,5 @@
+package com.watchbox.maniac;
+
 /**
  * Represents the current round phase.
  */

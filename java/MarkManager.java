@@ -1,3 +1,5 @@
+package com.watchbox.maniac;
+
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 

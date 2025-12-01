@@ -1,55 +1,61 @@
-import org.bukkit.Bukkit;
-import org.bukkit.World;
-import org.bukkit.entity.LivingEntity;
+import org.bukkit.entity.Player;
 
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 /**
- * Keeps track of marked entities in memory using their UUIDs.
+ * Tracks normal and empowered marks on players.
  */
 public class MarkManager {
-    private final Set<UUID> marked = new HashSet<>();
-
-    /**
-     * Apply a mark to the given entity.
-     */
-    public void mark(LivingEntity entity) {
-        marked.add(entity.getUniqueId());
+    private static class MarkCounts {
+        int normal;
+        int empowered;
     }
 
-    /**
-     * Remove a mark from the given entity.
-     */
-    public void unmark(LivingEntity entity) {
-        marked.remove(entity.getUniqueId());
+    private final Map<UUID, MarkCounts> marks = new HashMap<>();
+
+    private MarkCounts getCounts(UUID uuid) {
+        return marks.computeIfAbsent(uuid, id -> new MarkCounts());
     }
 
-    public boolean isMarked(LivingEntity entity) {
-        return marked.contains(entity.getUniqueId());
+    public void addNormalMark(Player player, int amount) {
+        MarkCounts counts = getCounts(player.getUniqueId());
+        counts.normal += amount;
     }
 
-    /**
-     * Return all currently loaded living entities that are marked.
-     */
-    public List<LivingEntity> getMarkedEntities() {
-        return Bukkit.getWorlds().stream()
-                .flatMap(world -> world.getLivingEntities().stream())
-                .filter(entity -> marked.contains(entity.getUniqueId()))
-                .collect(Collectors.toList());
+    public void addEmpoweredMark(Player player, int amount) {
+        MarkCounts counts = getCounts(player.getUniqueId());
+        counts.empowered += amount;
     }
 
-    /**
-     * Drop marks for entities that are no longer valid.
-     */
-    public void cleanupMissingEntities() {
-        Set<UUID> stillPresent = Bukkit.getWorlds().stream()
-                .flatMap(world -> world.getLivingEntities().stream())
-                .map(LivingEntity::getUniqueId)
-                .collect(Collectors.toSet());
-        marked.retainAll(stillPresent);
+    public void clearNormalMarks(Player player) {
+        MarkCounts counts = getCounts(player.getUniqueId());
+        counts.normal = 0;
+    }
+
+    public void clearAllMarks(Player player) {
+        marks.remove(player.getUniqueId());
+    }
+
+    public int getNormalMarks(Player player) {
+        return getCounts(player.getUniqueId()).normal;
+    }
+
+    public int getEmpoweredMarks(Player player) {
+        return getCounts(player.getUniqueId()).empowered;
+    }
+
+    public int getTotalMarks(Player player) {
+        MarkCounts counts = getCounts(player.getUniqueId());
+        return counts.normal + counts.empowered;
+    }
+
+    public Map<UUID, MarkCounts> getAllMarks() {
+        return marks;
+    }
+
+    public void clearAll() {
+        marks.clear();
     }
 }

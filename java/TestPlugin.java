@@ -1,38 +1,54 @@
 import org.bukkit.plugin.java.JavaPlugin;
 
 /**
- * Main plugin entry. Registers managers, commands, and listeners for the role/mark demo.
+ * Main plugin entry for Maniac test mode.
  */
 public class TestPlugin extends JavaPlugin {
     private RoleManager roleManager;
     private MarkManager markManager;
-    private MurdererWeapon weapon;
+    private SilenceManager silenceManager;
+    private TaskManager taskManager;
+    private RoundManager roundManager;
+    private ManiacAbilityManager abilityManager;
 
     @Override
     public void onEnable() {
+        saveDefaultConfig();
         roleManager = new RoleManager();
         markManager = new MarkManager();
-        weapon = new MurdererWeapon();
+        silenceManager = new SilenceManager();
+        abilityManager = new ManiacAbilityManager();
+        taskManager = new TaskManager(this, roleManager, markManager);
+        taskManager.loadFromConfig(getConfig());
+        roundManager = new RoundManager(this, roleManager, markManager, taskManager);
 
-        // Register command executors for debug tools.
-        if (getCommand("dbgrole") != null) {
-            getCommand("dbgrole").setExecutor(new DebugRoleCommand(roleManager));
+        long silenceDuration = getConfig().getLong("signSilenceDurationTicks", 200L);
+        boolean logSigns = getConfig().getBoolean("logSignsToChat", true);
+        long normalCooldown = getConfig().getLong("normalMarkCooldown", 60L);
+        long empoweredCooldown = getConfig().getLong("empoweredMarkCooldown", 120L);
+        boolean empoweredEnabled = getConfig().getBoolean("maniacEmpoweredMarkEnabled", true);
+
+        // Commands
+        if (getCommand("maniacdebug") != null) {
+            getCommand("maniacdebug").setExecutor(new ManiacDebugCommand(roleManager, markManager, silenceManager, taskManager, roundManager, abilityManager, silenceDuration, normalCooldown, empoweredCooldown, empoweredEnabled));
         }
-        if (getCommand("dbgweapon") != null) {
-            getCommand("dbgweapon").setExecutor(new DebugWeaponCommand(roleManager, weapon));
+        if (getCommand("role") != null) {
+            getCommand("role").setExecutor(new RoleCommand(roleManager));
         }
-        if (getCommand("dbghighlight") != null) {
-            getCommand("dbghighlight").setExecutor(new DebugHighlightCommand(roleManager, markManager, this));
+        if (getCommand("round") != null) {
+            getCommand("round").setExecutor(new RoundCommand(roundManager));
         }
 
-        // Listen for weapon interactions and cleanup.
-        getServer().getPluginManager().registerEvents(new MurdererWeaponListener(roleManager, markManager, weapon), this);
+        // Listeners
+        getServer().getPluginManager().registerEvents(new SignListener(silenceManager, logSigns), this);
+        getServer().getPluginManager().registerEvents(new TaskListener(taskManager), this);
+        getServer().getPluginManager().registerEvents(new PlayerJoinListener(taskManager), this);
 
-        getLogger().info("Role/Mark test plugin enabled.");
+        getLogger().info("Watchbox Maniac test plugin enabled.");
     }
 
     @Override
     public void onDisable() {
-        getLogger().info("Role/Mark test plugin disabled.");
+        getLogger().info("Watchbox Maniac test plugin disabled.");
     }
 }

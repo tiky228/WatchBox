@@ -1,0 +1,42 @@
+# Round timings (in seconds)
+actionPhaseDuration: 120
+discussionPhaseDuration: 60
+
+# Mark mechanics
+maxMarksBeforeDeath: 3
+maniacEmpoweredMarkEnabled: true
+
+# Silence duration in ticks
+signSilenceDurationTicks: 200
+
+# Cooldowns in ticks
+normalMarkCooldown: 60
+empoweredMarkCooldown: 120
+silenceAbilityCooldown: 200
+
+# Locations for tasks
+ritualLanterns:
+  lantern1:
+    world: world
+    x: 0
+    y: 64
+    z: 0
+  lantern2:
+    world: world
+    x: 5
+    y: 64
+    z: 0
+signalBells:
+  bell1:
+    world: world
+    x: 10
+    y: 64
+    z: 0
+wellLocation:
+  world: world
+  x: 0
+  y: 64
+  z: 5
+
+# Sign logging
+logSignsToChat: true

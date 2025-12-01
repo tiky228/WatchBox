@@ -6,9 +6,10 @@ import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
-import org.bukkit.plugin.java.JavaPlugin;
+import org.bukkit.plugin.Plugin;
 import org.bukkit.scheduler.BukkitRunnable;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -19,9 +20,13 @@ import java.util.stream.Collectors;
 public class DebugHighlightCommand implements CommandExecutor {
     private final RoleManager roleManager;
     private final MarkManager markManager;
-    private final JavaPlugin plugin;
+    private final Plugin plugin;
 
-    public DebugHighlightCommand(RoleManager roleManager, MarkManager markManager, JavaPlugin plugin) {
+    public DebugHighlightCommand(Plugin plugin, MarkManager markManager) {
+        this(plugin, markManager, null);
+    }
+
+    public DebugHighlightCommand(Plugin plugin, MarkManager markManager, RoleManager roleManager) {
         this.roleManager = roleManager;
         this.markManager = markManager;
         this.plugin = plugin;
@@ -35,6 +40,10 @@ public class DebugHighlightCommand implements CommandExecutor {
         }
 
         if (args[0].equalsIgnoreCase("role") && args.length >= 2) {
+            if (roleManager == null) {
+                sender.sendMessage(Component.text("Role highlighting is unavailable.", NamedTextColor.RED));
+                return true;
+            }
             Role role = parseRole(args[1]);
             if (role == null) {
                 sender.sendMessage(Component.text("Unknown role. Use murderer or innocent.", NamedTextColor.RED));
@@ -49,7 +58,7 @@ public class DebugHighlightCommand implements CommandExecutor {
         }
 
         if (args[0].equalsIgnoreCase("marked")) {
-            List<LivingEntity> entities = markManager.getMarkedEntities();
+            List<LivingEntity> entities = new ArrayList<>(markManager.getMarkedEntities());
             applyGlowing(entities, 20 * 5);
             sender.sendMessage(Component.text("Highlighted " + entities.size() + " marked entity(ies).", NamedTextColor.AQUA));
             return true;

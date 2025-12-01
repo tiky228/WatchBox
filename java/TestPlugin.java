@@ -1,3 +1,5 @@
+package com.watchbox.maniac;
+
 import org.bukkit.plugin.java.JavaPlugin;
 
 /**

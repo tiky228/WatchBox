@@ -45,7 +45,7 @@ public class RoundManager {
     public void reloadDurations() {
         actionPhaseDuration = plugin.getConfig().getInt("actionPhaseDuration", 120);
         discussionPhaseDuration = plugin.getConfig().getInt("discussionPhaseDuration", 60);
-        votingPhaseDuration = plugin.getConfig().getInt("votingPhaseDuration", 45);
+        votingPhaseDuration = plugin.getConfig().getInt("votingPhaseDuration", 30);
         maxMarksBeforeDeath = plugin.getConfig().getInt("maxMarksBeforeDeath", 3);
     }
 
@@ -90,8 +90,7 @@ public class RoundManager {
 
     private void setPhase(RoundPhase phase, int durationSeconds) {
         if (currentPhase == RoundPhase.VOTING && phase != RoundPhase.VOTING && voteManager != null) {
-            voteManager.endVoting();
-            voteManager.eliminateTopVoted();
+            voteManager.concludeVoting();
         }
         currentPhase = phase;
         remainingSeconds = durationSeconds;

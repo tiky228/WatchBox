@@ -52,7 +52,7 @@ public class TestPlugin extends JavaPlugin {
             getCommand("round").setExecutor(new RoundCommand(roundManager));
         }
         if (getCommand("maniac") != null) {
-            getCommand("maniac").setExecutor(new ManiacCommand(roleManager, silenceManager, abilityManager, voteManager, killerSignItem, killerSignListener, silenceDuration));
+            getCommand("maniac").setExecutor(new ManiacCommand(this, roleManager, silenceManager, abilityManager, voteManager, killerSignItem, killerSignListener, silenceDuration));
         }
         if (getCommand("vote") != null) {
             getCommand("vote").setExecutor(new VoteCommand(voteManager));

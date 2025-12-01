@@ -67,6 +67,7 @@ public class TestPlugin extends JavaPlugin {
         getServer().getPluginManager().registerEvents(new PlayerJoinListener(taskManager), this);
         getServer().getPluginManager().registerEvents(new MurdererWeaponListener(this, roleManager, markManager, murdererWeapon), this);
         getServer().getPluginManager().registerEvents(killerSignListener, this);
+        getServer().getPluginManager().registerEvents(new DebugBookListener(debugBookFactory), this);
 
         getLogger().info("Watchbox Maniac test plugin enabled.");
     }

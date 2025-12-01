@@ -167,13 +167,14 @@ public class ManiacCommand implements CommandExecutor {
         }
         Location playerLoc = player.getLocation().clone();
         Location targetLoc = target.getLocation().clone();
+        playerLoc.setY(playerLoc.getY() + 0.1);
+        targetLoc.setY(targetLoc.getY() + 0.1);
         Bukkit.getScheduler().runTask(plugin, () -> {
             player.teleport(targetLoc);
             target.teleport(playerLoc);
             player.setFallDistance(0f);
             target.setFallDistance(0f);
         });
-        player.sendMessage(Component.text("Swap ability activated.", NamedTextColor.AQUA));
         return true;
     }
 }

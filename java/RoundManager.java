@@ -15,6 +15,7 @@ import java.util.List;
  * Controls the round phases and timers.
  */
 public class RoundManager {
+    private static final int VOTING_DURATION_SECONDS = 30;
     private final JavaPlugin plugin;
     private final RoleManager roleManager;
     private final MarkManager markManager;
@@ -45,7 +46,7 @@ public class RoundManager {
     public void reloadDurations() {
         actionPhaseDuration = plugin.getConfig().getInt("actionPhaseDuration", 120);
         discussionPhaseDuration = plugin.getConfig().getInt("discussionPhaseDuration", 60);
-        votingPhaseDuration = plugin.getConfig().getInt("votingPhaseDuration", 30);
+        votingPhaseDuration = VOTING_DURATION_SECONDS;
         maxMarksBeforeDeath = plugin.getConfig().getInt("maxMarksBeforeDeath", 3);
     }
 
@@ -93,7 +94,7 @@ public class RoundManager {
             voteManager.concludeVoting();
         }
         currentPhase = phase;
-        remainingSeconds = durationSeconds;
+        remainingSeconds = phase == RoundPhase.VOTING ? VOTING_DURATION_SECONDS : durationSeconds;
         plugin.getLogger().info("Phase set to " + phase + " for " + remainingSeconds + "s.");
         Bukkit.broadcast(Component.text("Phase: " + phase + " (" + remainingSeconds + "s)", NamedTextColor.LIGHT_PURPLE));
         if (phase == RoundPhase.VOTING && voteManager != null) {

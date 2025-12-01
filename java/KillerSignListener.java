@@ -17,21 +17,29 @@ import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.bukkit.craftbukkit.v1_20_R3.entity.CraftPlayer;
 
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
+import java.util.stream.Collectors;
+import net.minecraft.network.protocol.game.ClientboundSetEntityDataPacket;
+import net.minecraft.network.syncher.SynchedEntityData;
+import net.minecraft.world.entity.Entity;
 
 /**
  * Handles the Killer Sign interaction flow.
  */
 public class KillerSignListener implements Listener {
+    private final JavaPlugin plugin;
     private final RoleManager roleManager;
     private final MarkManager markManager;
     private final NamespacedKey killerSignKey;
 
     public KillerSignListener(JavaPlugin plugin, RoleManager roleManager, MarkManager markManager, KillerSignItem killerSignItem) {
+        this.plugin = plugin;
         this.roleManager = roleManager;
         this.markManager = markManager;
         this.killerSignKey = new NamespacedKey(plugin, "killer_sign");
@@ -121,6 +129,7 @@ public class KillerSignListener implements Listener {
             int total = counts.normal + counts.empowered;
             player.sendMessage(Component.text(name + " - " + total + " mark" + (total == 1 ? "" : "s"), NamedTextColor.YELLOW));
         }
+        highlightMarkedPlayers(player);
     }
 
     private List<Player> getAlivePlayers(UUID exclude) {
@@ -135,5 +144,41 @@ public class KillerSignListener implements Listener {
             alive.add(target);
         }
         return alive;
+    }
+
+    private void highlightMarkedPlayers(Player maniac) {
+        List<Player> targets = markManager.getAllMarks().keySet().stream()
+                .map(Bukkit::getPlayer)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
+        if (targets.isEmpty()) {
+            return;
+        }
+        for (Player target : targets) {
+            sendGlowPacket(maniac, target, true);
+        }
+        Bukkit.getScheduler().runTaskLater(plugin, () -> {
+            if (!maniac.isOnline()) {
+                return;
+            }
+            for (Player target : targets) {
+                sendGlowPacket(maniac, target, false);
+            }
+        }, 100L);
+    }
+
+    private void sendGlowPacket(Player viewer, Player target, boolean glow) {
+        CraftPlayer craftViewer = (CraftPlayer) viewer;
+        net.minecraft.world.entity.player.Player targetHandle = ((CraftPlayer) target).getHandle();
+        SynchedEntityData data = targetHandle.getEntityData();
+        byte flags = data.get(Entity.DATA_SHARED_FLAGS_ID);
+        if (glow) {
+            flags |= 0x40;
+        } else {
+            flags &= ~0x40;
+        }
+        SynchedEntityData.DataValue<Byte> dataValue = SynchedEntityData.DataValue.create(Entity.DATA_SHARED_FLAGS_ID, flags);
+        ClientboundSetEntityDataPacket packet = new ClientboundSetEntityDataPacket(target.getEntityId(), List.of(dataValue));
+        craftViewer.getHandle().connection.send(packet);
     }
 }

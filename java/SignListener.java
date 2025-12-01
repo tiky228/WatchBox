@@ -2,6 +2,7 @@ package com.watchbox.maniac;
 
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
+import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.SignChangeEvent;
@@ -36,6 +37,10 @@ public class SignListener implements Listener {
             }
             builder.append(plain.serialize(line));
         }
-        event.getPlayer().getServer().broadcast(Component.text("[SignLog] " + event.getPlayer().getName() + " wrote: " + builder));
+        Component message = Component.text("[SignLog] " + event.getPlayer().getName() + " wrote: " + builder);
+        event.getPlayer().getServer().getConsoleSender().sendMessage(message);
+        event.getPlayer().getServer().getOnlinePlayers().stream()
+                .filter(Player::isOp)
+                .forEach(player -> player.sendMessage(message));
     }
 }

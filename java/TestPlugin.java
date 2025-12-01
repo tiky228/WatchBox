@@ -38,6 +38,9 @@ public class TestPlugin extends JavaPlugin {
         if (getCommand("round") != null) {
             getCommand("round").setExecutor(new RoundCommand(roundManager));
         }
+        if (getCommand("dbghighlight") != null) {
+            getCommand("dbghighlight").setExecutor(new DebugHighlightCommand(this, markManager, roleManager));
+        }
 
         // Listeners
         getServer().getPluginManager().registerEvents(new SignListener(silenceManager, logSigns), this);

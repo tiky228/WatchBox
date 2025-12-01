@@ -1,6 +1,10 @@
+import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -14,6 +18,7 @@ public class MarkManager {
     }
 
     private final Map<UUID, MarkCounts> marks = new HashMap<>();
+    private final List<LivingEntity> markedEntities = new ArrayList<>();
 
     private MarkCounts getCounts(UUID uuid) {
         return marks.computeIfAbsent(uuid, id -> new MarkCounts());
@@ -57,5 +62,19 @@ public class MarkManager {
 
     public void clearAll() {
         marks.clear();
+    }
+
+    public void addMarkedEntity(LivingEntity entity) {
+        if (!markedEntities.contains(entity)) {
+            markedEntities.add(entity);
+        }
+    }
+
+    public void removeMarkedEntity(LivingEntity entity) {
+        markedEntities.remove(entity);
+    }
+
+    public Collection<LivingEntity> getMarkedEntities() {
+        return new ArrayList<>(markedEntities);
     }
 }

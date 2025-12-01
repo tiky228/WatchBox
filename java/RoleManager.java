@@ -14,12 +14,20 @@ public class RoleManager {
         roles.put(player.getUniqueId(), role);
     }
 
+    public void setRole(UUID uuid, Role role) {
+        roles.put(uuid, role);
+    }
+
+    public void setRole(Player player, Role role) {
+        setRole(player.getUniqueId(), role);
+    }
+
     public Role getRole(Player player) {
-        return roles.getOrDefault(player.getUniqueId(), Role.CIVILIAN);
+        return roles.getOrDefault(player.getUniqueId(), Role.INNOCENT);
     }
 
     public Role getRole(UUID uuid) {
-        return roles.getOrDefault(uuid, Role.CIVILIAN);
+        return roles.getOrDefault(uuid, Role.INNOCENT);
     }
 
     public boolean isManiac(Player player) {

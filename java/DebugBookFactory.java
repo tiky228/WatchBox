@@ -1,6 +1,7 @@
 package com.watchbox.maniac;
 
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.TextComponent;
 import net.kyori.adventure.text.event.ClickEvent;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Bukkit;
@@ -62,7 +63,7 @@ public class DebugBookFactory {
     }
 
     private Component buildStatePage() {
-        Component.Builder builder = Component.text();
+        TextComponent.Builder builder = Component.text();
         builder.append(Component.text("Game State", NamedTextColor.GOLD)).append(Component.newline());
         builder.append(Component.text("Phase: " + roundManager.getCurrentPhase(), NamedTextColor.YELLOW)).append(Component.newline());
         builder.append(Component.text("Time Left: " + roundManager.getRemainingSeconds() + "s", NamedTextColor.YELLOW)).append(Component.newline());
@@ -88,7 +89,7 @@ public class DebugBookFactory {
     }
 
     private Component buildRoundControlPage() {
-        Component.Builder builder = Component.text();
+        TextComponent.Builder builder = Component.text();
         builder.append(Component.text("Round Controls", NamedTextColor.GOLD)).append(Component.newline());
         builder.append(clickable("Start", "/maniacdebug start", NamedTextColor.GREEN)).append(Component.newline());
         builder.append(clickable("Stop", "/maniacdebug stop", NamedTextColor.RED)).append(Component.newline());
@@ -97,7 +98,7 @@ public class DebugBookFactory {
     }
 
     private Component buildPhaseControlPage() {
-        Component.Builder builder = Component.text();
+        TextComponent.Builder builder = Component.text();
         builder.append(Component.text("Phase Overrides", NamedTextColor.GOLD)).append(Component.newline());
         builder.append(clickable("ACTION", "/maniacdebug phase action", NamedTextColor.YELLOW)).append(Component.newline());
         builder.append(clickable("DISCUSSION", "/maniacdebug phase discussion", NamedTextColor.YELLOW)).append(Component.newline());
@@ -108,7 +109,7 @@ public class DebugBookFactory {
     }
 
     private Component buildMarkPage() {
-        Component.Builder builder = Component.text();
+        TextComponent.Builder builder = Component.text();
         builder.append(Component.text("Marks & Debug", NamedTextColor.GOLD)).append(Component.newline());
         builder.append(clickable("List Marks", "/maniacdebug listmarks", NamedTextColor.AQUA)).append(Component.newline());
         builder.append(Component.text("Add mark to player:", NamedTextColor.GRAY)).append(Component.newline());

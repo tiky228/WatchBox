@@ -44,6 +44,16 @@
 
     <!-- Репозитории -->
     <repositories>
+
+        <repository>
+            <id>codemc-releases</id>
+            <url>https://repo.codemc.io/repository/maven-releases/</url>
+        </repository>
+        <repository>
+            <id>codemc-snapshots</id>
+            <url>https://repo.codemc.io/repository/maven-snapshots/</url>
+        </repository>
+
         <!-- PaperMC -->
         <repository>
             <id>papermc</id>
@@ -65,6 +75,15 @@
 
     <!-- Зависимости -->
     <dependencies>
+
+        <!-- PacketEvents Spigot -->
+        <dependency>
+            <groupId>com.github.retrooper</groupId>
+            <artifactId>packetevents-spigot</artifactId>
+            <version>2.10.1</version>
+            <scope>provided</scope>
+        </dependency>
+
 
         <!-- Paper API -->
         <dependency>

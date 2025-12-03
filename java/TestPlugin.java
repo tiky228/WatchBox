@@ -17,6 +17,7 @@ public class TestPlugin extends JavaPlugin {
     private VoteManager voteManager;
     private KillerSignItem killerSignItem;
     private KillerSignListener killerSignListener;
+    private ManiacGlowHelper maniacGlowHelper;
 
     @Override
     public void onEnable() {
@@ -32,8 +33,9 @@ public class TestPlugin extends JavaPlugin {
         voteManager = new VoteManager(this, roleManager, roundManager);
         roundManager.setVoteManager(voteManager);
         debugBookFactory = new DebugBookFactory(this, roleManager, roundManager, markManager);
+        maniacGlowHelper = new ManiacGlowHelper(this);
         killerSignItem = new KillerSignItem(this);
-        killerSignListener = new KillerSignListener(this, roleManager, markManager);
+        killerSignListener = new KillerSignListener(this, roleManager, markManager, maniacGlowHelper);
 
         long silenceDuration = getConfig().getLong("signSilenceDurationTicks", 200L);
         boolean logSigns = getConfig().getBoolean("logSignsToChat", true);

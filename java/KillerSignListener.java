@@ -19,7 +19,6 @@ import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -30,15 +29,15 @@ import java.util.stream.Collectors;
  * Handles right-click interactions with the Killer Sign and provides the Maniac ability UI.
  */
 public class KillerSignListener implements Listener {
-    private final JavaPlugin plugin;
     private final RoleManager roleManager;
     private final MarkManager markManager;
+    private final ManiacGlowHelper glowHelper;
     private final NamespacedKey killerSignKey;
 
-    public KillerSignListener(JavaPlugin plugin, RoleManager roleManager, MarkManager markManager) {
-        this.plugin = plugin;
+    public KillerSignListener(JavaPlugin plugin, RoleManager roleManager, MarkManager markManager, ManiacGlowHelper glowHelper) {
         this.roleManager = roleManager;
         this.markManager = markManager;
+        this.glowHelper = glowHelper;
         this.killerSignKey = new NamespacedKey(plugin, "killer_sign");
     }
 
@@ -85,9 +84,9 @@ public class KillerSignListener implements Listener {
         player.sendMessage(Component.text("Killer Abilities", NamedTextColor.DARK_RED));
         player.sendMessage(Component.text("[Silence player]", NamedTextColor.RED)
                 .clickEvent(ClickEvent.runCommand("/maniac silence")));
-        player.sendMessage(Component.text("[Show marked players]", NamedTextColor.GOLD)
+        player.sendMessage(Component.text("[Show marked players]", NamedTextColor.AQUA)
                 .clickEvent(ClickEvent.runCommand("/maniac showmarks")));
-        player.sendMessage(Component.text("[Swap places with player]", NamedTextColor.AQUA)
+        player.sendMessage(Component.text("[Swap places with player]", NamedTextColor.GREEN)
                 .clickEvent(ClickEvent.runCommand("/maniac swap")));
     }
 
@@ -98,9 +97,9 @@ public class KillerSignListener implements Listener {
             return;
         }
 
-        player.sendMessage(Component.text("Select a target to silence:", NamedTextColor.YELLOW));
+        player.sendMessage(Component.text("Select a target to silence:", NamedTextColor.DARK_AQUA));
         for (Player target : targets) {
-            player.sendMessage(Component.text(target.getName() + " ", NamedTextColor.WHITE)
+            player.sendMessage(Component.text(target.getName() + " ", NamedTextColor.GRAY)
                     .append(Component.text("[SILENCE]", NamedTextColor.RED)
                             .clickEvent(ClickEvent.runCommand("/maniac silence " + target.getName()))));
         }
@@ -113,9 +112,9 @@ public class KillerSignListener implements Listener {
             return;
         }
 
-        player.sendMessage(Component.text("Swap with:", NamedTextColor.YELLOW));
+        player.sendMessage(Component.text("Swap with:", NamedTextColor.DARK_AQUA));
         for (Player target : targets) {
-            player.sendMessage(Component.text(target.getName() + " ", NamedTextColor.WHITE)
+            player.sendMessage(Component.text(target.getName() + " ", NamedTextColor.GRAY)
                     .append(Component.text("[SWAP]", NamedTextColor.AQUA)
                             .clickEvent(ClickEvent.runCommand("/maniac swap " + target.getName()))));
         }
@@ -138,8 +137,8 @@ public class KillerSignListener implements Listener {
             return;
         }
 
-        player.sendMessage(Component.text("Highlighting marked players...", NamedTextColor.GOLD));
-        showMarkedGlow(player, onlineMarked);
+        player.sendMessage(Component.text("Highlighting marked players...", NamedTextColor.AQUA));
+        glowHelper.showMarkedGlow(player, onlineMarked, 60);
     }
 
     private List<Player> getAlivePlayers(UUID exclude) {
@@ -154,24 +153,5 @@ public class KillerSignListener implements Listener {
             alive.add(target);
         }
         return alive;
-    }
-
-    private void showMarkedGlow(Player viewer, Collection<Player> markedPlayers) {
-        if (markedPlayers.isEmpty()) {
-            return;
-        }
-
-        // Using Bukkit API glow affects all viewers; NMS would be required for per-viewer glow.
-        for (Player target : markedPlayers) {
-            target.setGlowing(true);
-        }
-
-        Bukkit.getScheduler().runTaskLater(plugin, () -> {
-            for (Player target : markedPlayers) {
-                if (target.isOnline()) {
-                    target.setGlowing(false);
-                }
-            }
-        }, 60L);
     }
 }

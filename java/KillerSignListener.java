@@ -3,9 +3,6 @@ package com.watchbox.maniac;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.event.ClickEvent;
 import net.kyori.adventure.text.format.NamedTextColor;
-import net.minecraft.network.protocol.game.ClientboundSetEntityDataPacket;
-import net.minecraft.network.syncher.SynchedEntityData;
-import net.minecraft.world.entity.Entity;
 import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
 import org.bukkit.NamespacedKey;
@@ -20,7 +17,6 @@ import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.plugin.java.JavaPlugin;
-import org.bukkit.craftbukkit.v1_20_R3.entity.CraftPlayer;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -39,7 +35,7 @@ public class KillerSignListener implements Listener {
     private final MarkManager markManager;
     private final NamespacedKey killerSignKey;
 
-    public KillerSignListener(JavaPlugin plugin, RoleManager roleManager, MarkManager markManager, KillerSignItem killerSignItem) {
+    public KillerSignListener(JavaPlugin plugin, RoleManager roleManager, MarkManager markManager) {
         this.plugin = plugin;
         this.roleManager = roleManager;
         this.markManager = markManager;
@@ -48,7 +44,7 @@ public class KillerSignListener implements Listener {
 
     @EventHandler
     public void onInteract(PlayerInteractEvent event) {
-        if (event.getHand() == EquipmentSlot.OFF_HAND) {
+        if (event.getHand() != EquipmentSlot.HAND) {
             return;
         }
 
@@ -57,12 +53,12 @@ public class KillerSignListener implements Listener {
             return;
         }
 
-        ItemStack item = event.getItem();
+        Player player = event.getPlayer();
+        ItemStack item = player.getInventory().getItemInMainHand();
         if (!isKillerSign(item)) {
             return;
         }
 
-        Player player = event.getPlayer();
         event.setCancelled(true);
 
         if (!(player.isOp() || roleManager.isManiac(player))) {
@@ -74,7 +70,7 @@ public class KillerSignListener implements Listener {
     }
 
     private boolean isKillerSign(ItemStack itemStack) {
-        if (itemStack == null) {
+        if (itemStack == null || itemStack.getType().isAir()) {
             return false;
         }
         ItemMeta meta = itemStack.getItemMeta();
@@ -143,7 +139,7 @@ public class KillerSignListener implements Listener {
         }
 
         player.sendMessage(Component.text("Highlighting marked players...", NamedTextColor.GOLD));
-        showMarkedGlowToPlayer(player, onlineMarked);
+        showMarkedGlow(player, onlineMarked);
     }
 
     private List<Player> getAlivePlayers(UUID exclude) {
@@ -160,39 +156,22 @@ public class KillerSignListener implements Listener {
         return alive;
     }
 
-    private void showMarkedGlowToPlayer(Player viewer, Collection<Player> markedPlayers) {
+    private void showMarkedGlow(Player viewer, Collection<Player> markedPlayers) {
         if (markedPlayers.isEmpty()) {
             return;
         }
 
+        // Using Bukkit API glow affects all viewers; NMS would be required for per-viewer glow.
         for (Player target : markedPlayers) {
-            sendGlowPacket(viewer, target, true);
+            target.setGlowing(true);
         }
 
         Bukkit.getScheduler().runTaskLater(plugin, () -> {
-            if (!viewer.isOnline()) {
-                return;
-            }
             for (Player target : markedPlayers) {
-                sendGlowPacket(viewer, target, false);
+                if (target.isOnline()) {
+                    target.setGlowing(false);
+                }
             }
-        }, 100L);
-    }
-
-    private void sendGlowPacket(Player viewer, Player target, boolean glowing) {
-        CraftPlayer craftViewer = (CraftPlayer) viewer;
-        net.minecraft.world.entity.player.Player targetHandle = ((CraftPlayer) target).getHandle();
-        SynchedEntityData data = targetHandle.getEntityData();
-        byte flags = data.get(Entity.DATA_SHARED_FLAGS_ID);
-
-        if (glowing) {
-            flags |= 0x40;
-        } else {
-            flags &= ~0x40;
-        }
-
-        SynchedEntityData.DataValue<Byte> dataValue = SynchedEntityData.DataValue.create(Entity.DATA_SHARED_FLAGS_ID, flags);
-        ClientboundSetEntityDataPacket packet = new ClientboundSetEntityDataPacket(target.getEntityId(), List.of(dataValue));
-        craftViewer.getHandle().connection.send(packet);
+        }, 60L);
     }
 }

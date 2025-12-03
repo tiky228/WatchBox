@@ -1,6 +1,5 @@
 package com.watchbox.maniac;
 
-import com.github.retrooper.packetevents.util.SpigotConversionUtil;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
@@ -200,8 +199,14 @@ public class ManiacCommand implements CommandExecutor {
         World world = player.getWorld();
 
         Entity matched = world.getEntities().stream()
-                .filter(entity -> PlainTextComponentSerializer.plainText().serialize(entity.displayName())
-                        .equalsIgnoreCase(targetName))
+                .filter(entity -> {
+                    Component nameComponent = entity.customName();
+                    if (nameComponent == null) {
+                        nameComponent = Component.text(entity.getName());
+                    }
+                    String visibleName = PlainTextComponentSerializer.plainText().serialize(nameComponent);
+                    return visibleName.equalsIgnoreCase(targetName);
+                })
                 .findFirst()
                 .orElse(null);
 
@@ -211,12 +216,6 @@ public class ManiacCommand implements CommandExecutor {
         }
 
         int entityId = matched.getEntityId();
-        Entity resolved = SpigotConversionUtil.getEntityById(world, entityId);
-        if (resolved == null) {
-            sender.sendMessage(Component.text("Failed to resolve entity by id.", NamedTextColor.RED));
-            return true;
-        }
-
         Component message = Component.text("Entity '" + targetName + "' has id " + entityId + ".", NamedTextColor.GREEN);
         sender.sendMessage(message);
         plugin.getLogger().info("/maniac entityId resolved '" + targetName + "' to id " + entityId + " in world " + world.getName());

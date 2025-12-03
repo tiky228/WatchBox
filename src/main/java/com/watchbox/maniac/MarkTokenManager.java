@@ -138,11 +138,9 @@ public class MarkTokenManager implements Listener {
     }
 
     private void hideTokenFromViewer(PacketEvent event) {
-        int entityId = event.getPacket().getIntegers().read(0);
-        Entity entity = event.getPlayer().getWorld().getEntities().stream()
-                .filter(candidate -> candidate.getEntityId() == entityId)
-                .findFirst()
-                .orElse(null);
+        Entity entity = event.getPacket()
+                .getEntityModifier(event.getPlayer().getWorld())
+                .readSafely(0);
         if (!(entity instanceof Player holder)) {
             return;
         }

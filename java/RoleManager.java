@@ -40,6 +40,10 @@ public class RoleManager {
         return getRole(player) == Role.CIVILIAN;
     }
 
+    public void clearRole(Player player) {
+        roles.remove(player.getUniqueId());
+    }
+
     public void clear() {
         roles.clear();
     }

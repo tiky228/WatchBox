@@ -32,7 +32,7 @@ public class TestPlugin extends JavaPlugin {
         roundManager = new RoundManager(this, roleManager, markManager, taskManager);
         voteManager = new VoteManager(this, roleManager, roundManager);
         roundManager.setVoteManager(voteManager);
-        debugBookFactory = new DebugBookFactory(this);
+        debugBookFactory = new DebugBookFactory(this, roundManager, roleManager, markManager);
         maniacGlowHelper = new ManiacGlowHelper(this);
         killerSignItem = new KillerSignItem(this);
         killerSignListener = new KillerSignListener(this, roleManager, markManager, maniacGlowHelper);

@@ -41,7 +41,7 @@ public class DebugWeaponCommand implements CommandExecutor {
         // Ensure the player is a murderer so they can use the item.
         if (roleManager.getRole(target.getUniqueId()) != Role.MURDERER) {
             roleManager.setRole(target.getUniqueId(), Role.MURDERER);
-            target.sendMessage(Component.text("You were set to MURDERER to use the weapon.", NamedTextColor.GOLD));
+            target.sendMessage(Component.text("You were set to MURDERER to use the weapon.", NamedTextColor.DARK_AQUA));
         }
 
         PlayerInventory inv = target.getInventory();

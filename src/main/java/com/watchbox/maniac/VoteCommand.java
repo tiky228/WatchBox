@@ -35,7 +35,7 @@ public class VoteCommand implements CommandExecutor {
             return true;
         }
         if (args.length < 1) {
-            voter.sendMessage(Component.text("Usage: /vote <player>", NamedTextColor.YELLOW));
+            voter.sendMessage(Component.text("Usage: /vote <player>", NamedTextColor.DARK_AQUA));
             return true;
         }
         Player target = Bukkit.getPlayer(args[0]);

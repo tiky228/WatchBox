@@ -21,7 +21,7 @@ public class RoleCommand implements CommandExecutor {
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (args.length == 0) {
-            sender.sendMessage(Component.text("Usage: /" + label + " set <player> <MANIAC|CIVILIAN> | /" + label + " get <player>", NamedTextColor.YELLOW));
+            sender.sendMessage(Component.text("Usage: /" + label + " set <player> <MANIAC|CIVILIAN> | /" + label + " get <player>", NamedTextColor.DARK_AQUA));
             return true;
         }
         if (args[0].equalsIgnoreCase("set") && args.length >= 3) {

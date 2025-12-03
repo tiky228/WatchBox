@@ -40,7 +40,7 @@ public class ManiacCommand implements CommandExecutor {
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (args.length == 0) {
-            sender.sendMessage(Component.text("Usage: votebook|killersign|silence|swap|showmarks", NamedTextColor.YELLOW));
+            sender.sendMessage(Component.text("Usage: votebook|killersign|silence|swap|showmarks", NamedTextColor.DARK_AQUA));
             return true;
         }
         switch (args[0].toLowerCase()) {
@@ -76,7 +76,7 @@ public class ManiacCommand implements CommandExecutor {
             return true;
         }
         if (args.length < 2) {
-            sender.sendMessage(Component.text("Usage: /maniac votebook <player>", NamedTextColor.YELLOW));
+            sender.sendMessage(Component.text("Usage: /maniac votebook <player>", NamedTextColor.DARK_AQUA));
             return true;
         }
         Player target = Bukkit.getPlayer(args[1]);
@@ -95,7 +95,7 @@ public class ManiacCommand implements CommandExecutor {
             return true;
         }
         if (args.length < 2) {
-            sender.sendMessage(Component.text("Usage: /maniac killersign <player>", NamedTextColor.YELLOW));
+            sender.sendMessage(Component.text("Usage: /maniac killersign <player>", NamedTextColor.DARK_AQUA));
             return true;
         }
         Player target = Bukkit.getPlayer(args[1]);

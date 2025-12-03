@@ -1,6 +1,7 @@
 package com.watchbox.maniac;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -38,6 +39,7 @@ public class RoundManager {
     private final RoleManager roleManager;
     private final MarkManager markManager;
     private final TaskManager taskManager;
+    private final MarkTokenManager markTokenManager;
     private VoteManager voteManager;
 
     private RoundPhase currentPhase = RoundPhase.PRE_ROUND;
@@ -51,12 +53,15 @@ public class RoundManager {
     private final Map<UUID, PlayerDisguise> activeDisguises = new HashMap<>();
     private Scoreboard hiddenNameScoreboard;
     private Team hiddenTeam;
+    private final Map<UUID, ItemStack[]> savedInventories = new HashMap<>();
+    private final Map<UUID, ItemStack[]> savedArmor = new HashMap<>();
 
-    public RoundManager(JavaPlugin plugin, RoleManager roleManager, MarkManager markManager, TaskManager taskManager) {
+    public RoundManager(JavaPlugin plugin, RoleManager roleManager, MarkManager markManager, TaskManager taskManager, MarkTokenManager markTokenManager) {
         this.plugin = plugin;
         this.roleManager = roleManager;
         this.markManager = markManager;
         this.taskManager = taskManager;
+        this.markTokenManager = markTokenManager;
         reloadDurations();
     }
 
@@ -74,6 +79,8 @@ public class RoundManager {
         cancelTimer();
         cancelDisguises();
         clearHiddenNameTeam();
+        clearSavedInventories();
+        markTokenManager.removeTokensFromAll();
         if (voteManager != null) {
             voteManager.endVoting();
         }
@@ -85,9 +92,8 @@ public class RoundManager {
         prepareParticipants();
         if (assignRoles()) {
             giveStartingSigns();
+            giveMarkTokens();
             applyRoundStartEffects();
-            applyDisguises();
-            setupHiddenNameTeam();
 
             setPhase(RoundPhase.ROUND_START, 3);
         }
@@ -100,6 +106,9 @@ public class RoundManager {
         }
         cancelDisguises();
         clearHiddenNameTeam();
+        restoreInventories();
+        clearSavedInventories();
+        markTokenManager.removeTokensFromAll();
         roleManager.clear();
         markManager.clearAll();
         currentPhase = RoundPhase.PRE_ROUND;
@@ -111,7 +120,7 @@ public class RoundManager {
             case ACTION -> enterDiscussionPhase();
             case DISCUSSION -> enterVotingPhase();
             case VOTING -> enterRoundEndPhase();
-            case ROUND_END -> endRound();
+            case ROUND_END -> enterActionPhase();
             case PRE_ROUND -> {
             }
         }
@@ -189,15 +198,25 @@ public class RoundManager {
     }
 
     private void enterActionPhase() {
+        restoreInventories();
+        giveMarkTokens();
+        applyDisguises();
+        setupHiddenNameTeam();
         setPhase(RoundPhase.ACTION, actionPhaseDuration);
     }
 
     private void enterDiscussionPhase() {
         resolveMarks();
+        cancelDisguises();
+        clearHiddenNameTeam();
+        saveAndClearInventories();
         setPhase(RoundPhase.DISCUSSION, discussionPhaseDuration);
     }
 
     private void enterVotingPhase() {
+        cancelDisguises();
+        clearHiddenNameTeam();
+        clearInventoriesForAlivePlayers();
         if (voteManager != null) {
             voteManager.startVoting();
         }
@@ -206,7 +225,7 @@ public class RoundManager {
 
     private void enterRoundEndPhase() {
         if (voteManager != null) {
-            voteManager.endVoting();
+            voteManager.concludeVoting();
         }
         checkWinConditions();
         setPhase(RoundPhase.ROUND_END, 5);
@@ -223,7 +242,7 @@ public class RoundManager {
     }
 
     private void prepareParticipants() {
-        for (Player player : Bukkit.getOnlinePlayers()) {
+        for (Player player : new ArrayList<>(Bukkit.getOnlinePlayers())) {
             if (player.getGameMode() == GameMode.SPECTATOR) {
                 player.setGameMode(GameMode.ADVENTURE);
             }
@@ -246,6 +265,16 @@ public class RoundManager {
             roleManager.assignRole(players.get(i), Role.CIVILIAN);
         }
         return true;
+    }
+
+    private void giveMarkTokens() {
+        for (Player player : getAlivePlayers()) {
+            if (roleManager.isManiac(player)) {
+                markTokenManager.giveToken(player);
+            } else {
+                markTokenManager.removeTokens(player);
+            }
+        }
     }
 
     private void giveStartingSigns() {
@@ -350,5 +379,56 @@ public class RoundManager {
             timerTask.cancel();
             timerTask = null;
         }
+    }
+
+    private void saveAndClearInventories() {
+        for (Player player : getAlivePlayers()) {
+            PlayerInventory inventory = player.getInventory();
+            savedInventories.put(player.getUniqueId(), cloneItems(inventory.getContents()));
+            savedArmor.put(player.getUniqueId(), cloneItems(inventory.getArmorContents()));
+            inventory.clear();
+            inventory.setArmorContents(new ItemStack[inventory.getArmorContents().length]);
+        }
+    }
+
+    private void clearInventoriesForAlivePlayers() {
+        for (Player player : getAlivePlayers()) {
+            player.getInventory().clear();
+            player.getInventory().setArmorContents(new ItemStack[player.getInventory().getArmorContents().length]);
+        }
+    }
+
+    private void restoreInventories() {
+        for (UUID uuid : new ArrayList<>(savedInventories.keySet())) {
+            Player player = Bukkit.getPlayer(uuid);
+            if (player == null || !player.isOnline() || player.getGameMode() == GameMode.SPECTATOR || player.isDead()) {
+                continue;
+            }
+            PlayerInventory inventory = player.getInventory();
+            ItemStack[] contents = savedInventories.get(uuid);
+            ItemStack[] armor = savedArmor.getOrDefault(uuid, new ItemStack[0]);
+            if (contents != null) {
+                inventory.setContents(cloneItems(contents));
+            }
+            if (armor.length > 0) {
+                inventory.setArmorContents(cloneItems(armor));
+            }
+        }
+        clearSavedInventories();
+    }
+
+    private void clearSavedInventories() {
+        savedInventories.clear();
+        savedArmor.clear();
+    }
+
+    private ItemStack[] cloneItems(ItemStack[] source) {
+        ItemStack[] copy = Arrays.copyOf(source, source.length);
+        for (int i = 0; i < copy.length; i++) {
+            if (copy[i] != null) {
+                copy[i] = copy[i].clone();
+            }
+        }
+        return copy;
     }
 }

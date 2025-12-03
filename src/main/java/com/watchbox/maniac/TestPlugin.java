@@ -18,6 +18,7 @@ public class TestPlugin extends JavaPlugin {
     private KillerSignItem killerSignItem;
     private KillerSignListener killerSignListener;
     private ManiacGlowHelper maniacGlowHelper;
+    private MarkTokenManager markTokenManager;
 
     @Override
     public void onEnable() {
@@ -29,7 +30,8 @@ public class TestPlugin extends JavaPlugin {
         murdererWeapon = new MurdererWeapon();
         taskManager = new TaskManager(this, roleManager, markManager);
         taskManager.loadFromConfig(getConfig());
-        roundManager = new RoundManager(this, roleManager, markManager, taskManager);
+        markTokenManager = new MarkTokenManager(this, roleManager, markManager);
+        roundManager = new RoundManager(this, roleManager, markManager, taskManager, markTokenManager);
         voteManager = new VoteManager(this, roleManager, roundManager);
         roundManager.setVoteManager(voteManager);
         debugBookFactory = new DebugBookFactory(this, roundManager, roleManager, markManager);
@@ -39,13 +41,10 @@ public class TestPlugin extends JavaPlugin {
 
         long silenceDuration = getConfig().getLong("signSilenceDurationTicks", 200L);
         boolean logSigns = getConfig().getBoolean("logSignsToChat", true);
-        long normalCooldown = getConfig().getLong("normalMarkCooldown", 60L);
-        long empoweredCooldown = getConfig().getLong("empoweredMarkCooldown", 120L);
-        boolean empoweredEnabled = getConfig().getBoolean("maniacEmpoweredMarkEnabled", true);
 
         // Commands
         if (getCommand("maniacdebug") != null) {
-            getCommand("maniacdebug").setExecutor(new ManiacDebugCommand(roleManager, markManager, silenceManager, taskManager, roundManager, abilityManager, debugBookFactory, voteManager, silenceDuration, normalCooldown, empoweredCooldown, empoweredEnabled));
+            getCommand("maniacdebug").setExecutor(new ManiacDebugCommand(roundManager));
         }
         if (getCommand("debugbook") != null) {
             getCommand("debugbook").setExecutor(new DebugBookCommand(debugBookFactory));
@@ -69,10 +68,10 @@ public class TestPlugin extends JavaPlugin {
         // Listeners
         getServer().getPluginManager().registerEvents(new SignListener(silenceManager, logSigns), this);
         getServer().getPluginManager().registerEvents(new TaskListener(taskManager), this);
-        getServer().getPluginManager().registerEvents(new PlayerJoinListener(taskManager), this);
         getServer().getPluginManager().registerEvents(new MurdererWeaponListener(this, roleManager, markManager, murdererWeapon), this);
         getServer().getPluginManager().registerEvents(killerSignListener, this);
         getServer().getPluginManager().registerEvents(new DebugBookListener(debugBookFactory), this);
+        getServer().getPluginManager().registerEvents(markTokenManager, this);
 
         getLogger().info("Watchbox Maniac test plugin enabled.");
     }

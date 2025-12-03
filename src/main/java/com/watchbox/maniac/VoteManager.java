@@ -47,7 +47,7 @@ public class VoteManager {
         getAlivePlayers().forEach(player -> tallied.put(player.getUniqueId(), 0L));
         counts.forEach((uuid, count) -> tallied.merge(uuid, count, Long::sum));
 
-        Bukkit.broadcast(Component.text("Voting results:", NamedTextColor.GOLD));
+        Bukkit.broadcast(Component.text("Voting results:", NamedTextColor.DARK_AQUA));
         tallied.entrySet().stream()
                 .sorted(Comparator.comparing(entry -> getNameFor(entry.getKey())))
                 .forEach(entry -> Bukkit.broadcast(Component.text(

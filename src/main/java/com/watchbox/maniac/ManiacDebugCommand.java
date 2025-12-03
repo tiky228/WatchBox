@@ -5,48 +5,30 @@ import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
+import org.bukkit.entity.Player;
+
+import java.util.function.Consumer;
 
 public class ManiacDebugCommand implements CommandExecutor {
-    private final RoleManager roleManager;
-    private final MarkManager markManager;
-    private final SilenceManager silenceManager;
-    private final TaskManager taskManager;
     private final RoundManager roundManager;
-    private final ManiacAbilityManager abilityManager;
-    private final DebugBookFactory debugBookFactory;
-    private final VoteManager voteManager;
-    private final long silenceDuration;
-    private final long normalCooldown;
-    private final long empoweredCooldown;
-    private final boolean empoweredEnabled;
 
-    public ManiacDebugCommand(RoleManager roleManager, MarkManager markManager, SilenceManager silenceManager, TaskManager taskManager,
-                              RoundManager roundManager, ManiacAbilityManager abilityManager, DebugBookFactory debugBookFactory,
-                              VoteManager voteManager, long silenceDuration, long normalCooldown, long empoweredCooldown,
-                              boolean empoweredEnabled) {
-        this.roleManager = roleManager;
-        this.markManager = markManager;
-        this.silenceManager = silenceManager;
-        this.taskManager = taskManager;
+    public ManiacDebugCommand(RoundManager roundManager) {
         this.roundManager = roundManager;
-        this.abilityManager = abilityManager;
-        this.debugBookFactory = debugBookFactory;
-        this.voteManager = voteManager;
-        this.silenceDuration = silenceDuration;
-        this.normalCooldown = normalCooldown;
-        this.empoweredCooldown = empoweredCooldown;
-        this.empoweredEnabled = empoweredEnabled;
     }
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-        if (!(sender.isOp() || !(sender instanceof org.bukkit.entity.Player))) {
-            sender.sendMessage(Component.text("Operator permission required.", NamedTextColor.RED));
+        if (args.length == 0) {
+            sendUsage(sender, label);
             return true;
         }
 
-        if (args.length == 0) {
-            sendUsage(sender, label);
+        if (tryExecuteDebugAction(sender, args[0])) {
+            return true;
+        }
+
+        if (sender instanceof Player player && !player.isOp()) {
+            sender.sendMessage(Component.text("Operator permission required.", NamedTextColor.RED));
             return true;
         }
 
@@ -65,8 +47,7 @@ public class ManiacDebugCommand implements CommandExecutor {
             }
             case "phase" -> handlePhaseCommand(sender, label, args);
             case "time" -> handleTimeCommand(sender, args);
-            case "action" -> handleBookAction(sender, args);
-            default -> sendUsage(sender, label);
+            default -> sender.sendMessage(Component.text("That debug action is no longer available.", NamedTextColor.RED));
         }
         return true;
     }
@@ -103,7 +84,7 @@ public class ManiacDebugCommand implements CommandExecutor {
 
     private void handleTimeCommand(CommandSender sender, String[] args) {
         if (args.length < 2) {
-            sender.sendMessage(Component.text("Usage: /maniacdebug time <seconds>", NamedTextColor.YELLOW));
+            sender.sendMessage(Component.text("Usage: /maniacdebug time <seconds>", NamedTextColor.DARK_AQUA));
             return;
         }
         try {
@@ -115,20 +96,31 @@ public class ManiacDebugCommand implements CommandExecutor {
         }
     }
 
-    private void handleBookAction(CommandSender sender, String[] args) {
-        if (!(sender instanceof org.bukkit.entity.Player player)) {
-            sender.sendMessage(Component.text("Players only.", NamedTextColor.RED));
-            return;
-        }
-        if (args.length < 2) {
-            sender.sendMessage(Component.text("Missing action id.", NamedTextColor.RED));
-            return;
-        }
-        String actionId = args[1];
-        debugBookFactory.executeAction(actionId, player);
+    private void sendUsage(CommandSender sender, String label) {
+        sender.sendMessage(Component.text("Usage: /" + label + " start|stop|nextphase|phase [phase] [seconds]|time <seconds>", NamedTextColor.DARK_AQUA));
     }
 
-    private void sendUsage(CommandSender sender, String label) {
-        sender.sendMessage(Component.text("Usage: /" + label + " start|stop|nextphase|phase [phase] [seconds]|time <seconds>", NamedTextColor.YELLOW));
+    private boolean tryExecuteDebugAction(CommandSender sender, String id) {
+        Consumer<Player> action = DebugBookFactory.DEBUG_ACTIONS.get(id);
+        if (action == null && !isKnownSubCommand(id)) {
+            sender.sendMessage(Component.text("That debug action is no longer available.", NamedTextColor.RED));
+            return true;
+        }
+        if (action == null) {
+            return false;
+        }
+        if (!(sender instanceof Player player)) {
+            sender.sendMessage(Component.text("Players only.", NamedTextColor.RED));
+            return true;
+        }
+        action.accept(player);
+        return true;
+    }
+
+    private boolean isKnownSubCommand(String id) {
+        return switch (id.toLowerCase()) {
+            case "start", "stop", "nextphase", "phase", "time" -> true;
+            default -> false;
+        };
     }
 }

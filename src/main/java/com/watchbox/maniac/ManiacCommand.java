@@ -1,13 +1,17 @@
 package com.watchbox.maniac;
 
+import com.github.retrooper.packetevents.util.SpigotConversionUtil;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
+import org.bukkit.World;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
+import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 
@@ -40,7 +44,7 @@ public class ManiacCommand implements CommandExecutor {
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (args.length == 0) {
-            sender.sendMessage(Component.text("Usage: votebook|killersign|silence|swap|showmarks", NamedTextColor.DARK_AQUA));
+            sender.sendMessage(Component.text("Usage: votebook|killersign|silence|swap|entityid|showmarks", NamedTextColor.DARK_AQUA));
             return true;
         }
         switch (args[0].toLowerCase()) {
@@ -50,6 +54,8 @@ public class ManiacCommand implements CommandExecutor {
                 return handleKillerSign(sender, args);
             case "silence":
                 return handleSilence(sender, args);
+            case "entityid":
+                return handleEntityId(sender, args);
             case "showmarks":
                 if (!(sender instanceof Player)) {
                     sender.sendMessage(Component.text("Players only.", NamedTextColor.RED));
@@ -175,6 +181,45 @@ public class ManiacCommand implements CommandExecutor {
             player.setFallDistance(0f);
             target.setFallDistance(0f);
         });
+        return true;
+    }
+
+    private boolean handleEntityId(CommandSender sender, String[] args) {
+        if (!(sender instanceof Player)) {
+            sender.sendMessage(Component.text("In-game only.", NamedTextColor.RED));
+            return true;
+        }
+
+        if (args.length < 2) {
+            sender.sendMessage(Component.text("Usage: /maniac entityId <entity name>", NamedTextColor.DARK_AQUA));
+            return true;
+        }
+
+        Player player = (Player) sender;
+        String targetName = String.join(" ", java.util.Arrays.copyOfRange(args, 1, args.length));
+        World world = player.getWorld();
+
+        Entity matched = world.getEntities().stream()
+                .filter(entity -> PlainTextComponentSerializer.plainText().serialize(entity.displayName())
+                        .equalsIgnoreCase(targetName))
+                .findFirst()
+                .orElse(null);
+
+        if (matched == null) {
+            sender.sendMessage(Component.text("No entity with that visible name found.", NamedTextColor.RED));
+            return true;
+        }
+
+        int entityId = matched.getEntityId();
+        Entity resolved = SpigotConversionUtil.getEntityById(world, entityId);
+        if (resolved == null) {
+            sender.sendMessage(Component.text("Failed to resolve entity by id.", NamedTextColor.RED));
+            return true;
+        }
+
+        Component message = Component.text("Entity '" + targetName + "' has id " + entityId + ".", NamedTextColor.GREEN);
+        sender.sendMessage(message);
+        plugin.getLogger().info("/maniac entityId resolved '" + targetName + "' to id " + entityId + " in world " + world.getName());
         return true;
     }
 }

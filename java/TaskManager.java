@@ -193,7 +193,7 @@ public class TaskManager {
     }
 
     public void giveStartingSigns(Player player) {
-        ItemStack signs = new ItemStack(Material.OAK_SIGN, 3);
+        ItemStack signs = new ItemStack(Material.OAK_SIGN, 6);
         player.getInventory().addItem(signs);
     }
 }

@@ -22,3 +22,10 @@ commands:
   round:
     description: View or edit round timing
     usage: /round info | /round time <seconds>
+  debugbook:
+    description: Gives the debug admin book.
+    usage: /debugbook
+    permission: maniac.debug
+permissions:
+  maniac.debug:
+    default: op

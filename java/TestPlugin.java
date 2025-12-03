@@ -32,7 +32,7 @@ public class TestPlugin extends JavaPlugin {
         roundManager = new RoundManager(this, roleManager, markManager, taskManager);
         voteManager = new VoteManager(this, roleManager, roundManager);
         roundManager.setVoteManager(voteManager);
-        debugBookFactory = new DebugBookFactory(this, roleManager, roundManager, markManager);
+        debugBookFactory = new DebugBookFactory(this);
         maniacGlowHelper = new ManiacGlowHelper(this);
         killerSignItem = new KillerSignItem(this);
         killerSignListener = new KillerSignListener(this, roleManager, markManager, maniacGlowHelper);
@@ -46,6 +46,9 @@ public class TestPlugin extends JavaPlugin {
         // Commands
         if (getCommand("maniacdebug") != null) {
             getCommand("maniacdebug").setExecutor(new ManiacDebugCommand(roleManager, markManager, silenceManager, taskManager, roundManager, abilityManager, debugBookFactory, voteManager, silenceDuration, normalCooldown, empoweredCooldown, empoweredEnabled));
+        }
+        if (getCommand("debugbook") != null) {
+            getCommand("debugbook").setExecutor(new DebugBookCommand(debugBookFactory));
         }
         if (getCommand("role") != null) {
             getCommand("role").setExecutor(new RoleCommand(roleManager));

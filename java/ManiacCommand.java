@@ -169,10 +169,12 @@ public class ManiacCommand implements CommandExecutor {
         Location targetLoc = target.getLocation().clone();
         playerLoc.setY(playerLoc.getY() + 0.1);
         targetLoc.setY(targetLoc.getY() + 0.1);
-        player.teleport(targetLoc);
-        target.teleport(playerLoc);
-        player.setFallDistance(0f);
-        target.setFallDistance(0f);
+        Bukkit.getScheduler().runTask(plugin, () -> {
+            player.teleport(targetLoc);
+            target.teleport(playerLoc);
+            player.setFallDistance(0f);
+            target.setFallDistance(0f);
+        });
         return true;
     }
 }

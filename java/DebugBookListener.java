@@ -6,7 +6,7 @@ import org.bukkit.event.block.Action;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.inventory.meta.BookMeta;
 
 /**
  * Refreshes debug books before they are opened.
@@ -31,7 +31,7 @@ public class DebugBookListener implements Listener {
         if (!debugBookFactory.isDebugBook(item)) {
             return;
         }
-        ItemMeta meta = debugBookFactory.createDebugBook().getItemMeta();
+        BookMeta meta = (BookMeta) debugBookFactory.createDebugBook().getItemMeta();
         if (meta != null) {
             item.setItemMeta(meta);
         }

@@ -33,7 +33,7 @@ public class TestPlugin extends JavaPlugin {
         roundManager.setVoteManager(voteManager);
         debugBookFactory = new DebugBookFactory(this, roleManager, roundManager, markManager);
         killerSignItem = new KillerSignItem(this);
-        killerSignListener = new KillerSignListener(this, roleManager, markManager, killerSignItem);
+        killerSignListener = new KillerSignListener(this, roleManager, markManager);
 
         long silenceDuration = getConfig().getLong("signSilenceDurationTicks", 200L);
         boolean logSigns = getConfig().getBoolean("logSignsToChat", true);

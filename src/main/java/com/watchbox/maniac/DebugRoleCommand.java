@@ -21,7 +21,7 @@ public class DebugRoleCommand implements CommandExecutor {
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (args.length == 0) {
-            sender.sendMessage(Component.text("Usage: /" + label + " set <player> <murderer|innocent> OR /" + label + " get [player]", NamedTextColor.YELLOW));
+            sender.sendMessage(Component.text("Usage: /" + label + " set <player> <murderer|innocent> OR /" + label + " get [player]", NamedTextColor.DARK_AQUA));
             return true;
         }
 

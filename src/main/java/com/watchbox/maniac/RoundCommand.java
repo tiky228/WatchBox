@@ -33,7 +33,7 @@ public class RoundCommand implements CommandExecutor {
             return true;
         }
 
-        sender.sendMessage(Component.text("Usage: /" + label + " info|time <seconds>", NamedTextColor.YELLOW));
+        sender.sendMessage(Component.text("Usage: /" + label + " info|time <seconds>", NamedTextColor.DARK_AQUA));
         return true;
     }
 }

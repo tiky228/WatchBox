@@ -37,7 +37,7 @@ public class DebugHighlightCommand implements CommandExecutor {
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (args.length < 1) {
-            sender.sendMessage(Component.text("Usage: /" + label + " role <murderer|innocent> OR /" + label + " marked", NamedTextColor.YELLOW));
+            sender.sendMessage(Component.text("Usage: /" + label + " role <murderer|innocent> OR /" + label + " marked", NamedTextColor.DARK_AQUA));
             return true;
         }
 

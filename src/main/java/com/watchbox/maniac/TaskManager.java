@@ -90,10 +90,10 @@ public class TaskManager {
         for (Location lantern : ritualLanterns) {
             if (lantern.equals(clicked)) {
                 if (activatedLanterns.contains(lantern)) {
-                    player.sendMessage(Component.text("This ritual lantern is already burning.", NamedTextColor.YELLOW));
+                    player.sendMessage(Component.text("This ritual lantern is already burning.", NamedTextColor.GRAY));
                 } else {
                     activatedLanterns.add(lantern);
-                    player.sendMessage(Component.text("You ignite a ritual lantern.", NamedTextColor.GOLD));
+                    player.sendMessage(Component.text("You ignite a ritual lantern.", NamedTextColor.GREEN));
                     updateManiacBlindness();
                 }
                 return true;

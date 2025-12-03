@@ -7,10 +7,35 @@ import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 
 public class ManiacDebugCommand implements CommandExecutor {
+    private final RoleManager roleManager;
+    private final MarkManager markManager;
+    private final SilenceManager silenceManager;
+    private final TaskManager taskManager;
     private final RoundManager roundManager;
+    private final ManiacAbilityManager abilityManager;
+    private final DebugBookFactory debugBookFactory;
+    private final VoteManager voteManager;
+    private final long silenceDuration;
+    private final long normalCooldown;
+    private final long empoweredCooldown;
+    private final boolean empoweredEnabled;
 
-    public ManiacDebugCommand(RoundManager roundManager) {
+    public ManiacDebugCommand(RoleManager roleManager, MarkManager markManager, SilenceManager silenceManager, TaskManager taskManager,
+                              RoundManager roundManager, ManiacAbilityManager abilityManager, DebugBookFactory debugBookFactory,
+                              VoteManager voteManager, long silenceDuration, long normalCooldown, long empoweredCooldown,
+                              boolean empoweredEnabled) {
+        this.roleManager = roleManager;
+        this.markManager = markManager;
+        this.silenceManager = silenceManager;
+        this.taskManager = taskManager;
         this.roundManager = roundManager;
+        this.abilityManager = abilityManager;
+        this.debugBookFactory = debugBookFactory;
+        this.voteManager = voteManager;
+        this.silenceDuration = silenceDuration;
+        this.normalCooldown = normalCooldown;
+        this.empoweredCooldown = empoweredCooldown;
+        this.empoweredEnabled = empoweredEnabled;
     }
 
     @Override

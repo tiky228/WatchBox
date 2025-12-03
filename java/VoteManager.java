@@ -70,6 +70,7 @@ public class VoteManager {
         }
         target.setGameMode(GameMode.SPECTATOR);
         Bukkit.broadcast(Component.text(target.getName() + " was eliminated by vote!", NamedTextColor.RED));
+        roundManager.checkWinConditions();
     }
 
     public void endVoting() {

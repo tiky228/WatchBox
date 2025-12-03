@@ -40,7 +40,7 @@ public class VotingBookFactory {
         builder.addHeading("Candidates", NamedTextColor.GREEN);
 
         for (Player target : voteTargets) {
-            Component line = Component.text(target.getName() + " - ", NamedTextColor.GRAY)
+            Component line = Component.text(target.getName() + " ", NamedTextColor.GRAY)
                     .append(Component.text("[VOTE]", NamedTextColor.RED)
                             .clickEvent(ClickEvent.runCommand("/vote " + target.getName())));
             builder.addLine(line);

@@ -78,7 +78,7 @@ public class ManiacDebugCommand implements CommandExecutor {
                     roundManager.forcePhase(phase, time);
                     sender.sendMessage(Component.text("Phase forced to " + phase + ".", NamedTextColor.GREEN));
                 } else {
-                    sender.sendMessage(Component.text("Usage: /" + label + " phase <lobby|action|discussion|voting|ended> [seconds]", NamedTextColor.YELLOW));
+                    sender.sendMessage(Component.text("Usage: /" + label + " phase <preround|start|action|discussion|voting|end> [seconds]", NamedTextColor.YELLOW));
                 }
                 return true;
             case "mark":
@@ -193,16 +193,18 @@ public class ManiacDebugCommand implements CommandExecutor {
 
     private RoundPhase parsePhase(String raw) {
         switch (raw.toLowerCase()) {
-            case "lobby":
-                return RoundPhase.LOBBY;
+            case "preround":
+                return RoundPhase.PRE_ROUND;
+            case "start":
+                return RoundPhase.ROUND_START;
             case "action":
                 return RoundPhase.ACTION;
             case "discussion":
                 return RoundPhase.DISCUSSION;
             case "voting":
                 return RoundPhase.VOTING;
-            case "ended":
-                return RoundPhase.ENDED;
+            case "end":
+                return RoundPhase.ROUND_END;
             default:
                 return null;
         }

@@ -2,7 +2,6 @@ package com.watchbox.maniac;
 
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
-import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
@@ -200,11 +199,10 @@ public class ManiacCommand implements CommandExecutor {
 
         Entity matched = world.getEntities().stream()
                 .filter(entity -> {
-                    Component nameComponent = entity.customName();
-                    if (nameComponent == null) {
-                        nameComponent = Component.text(entity.getName());
-                    }
-                    String visibleName = PlainTextComponentSerializer.plainText().serialize(nameComponent);
+                    String customName = entity.getCustomName();
+                    String visibleName = (customName == null || customName.isEmpty())
+                            ? entity.getName()
+                            : customName;
                     return visibleName.equalsIgnoreCase(targetName);
                 })
                 .findFirst()

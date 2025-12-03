@@ -65,6 +65,7 @@ public class ManiacDebugCommand implements CommandExecutor {
             }
             case "phase" -> handlePhaseCommand(sender, label, args);
             case "time" -> handleTimeCommand(sender, args);
+            case "action" -> handleBookAction(sender, args);
             default -> sendUsage(sender, label);
         }
         return true;
@@ -112,6 +113,19 @@ public class ManiacDebugCommand implements CommandExecutor {
         } catch (NumberFormatException ex) {
             sender.sendMessage(Component.text("Invalid seconds value.", NamedTextColor.RED));
         }
+    }
+
+    private void handleBookAction(CommandSender sender, String[] args) {
+        if (!(sender instanceof org.bukkit.entity.Player player)) {
+            sender.sendMessage(Component.text("Players only.", NamedTextColor.RED));
+            return;
+        }
+        if (args.length < 2) {
+            sender.sendMessage(Component.text("Missing action id.", NamedTextColor.RED));
+            return;
+        }
+        String actionId = args[1];
+        debugBookFactory.executeAction(actionId, player);
     }
 
     private void sendUsage(CommandSender sender, String label) {

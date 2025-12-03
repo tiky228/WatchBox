@@ -32,6 +32,7 @@ public class RoundManager {
     private static final int DEFAULT_ACTION_SECONDS = 600;
     private static final int DEFAULT_DISCUSSION_SECONDS = 60;
     private static final int VOTING_DURATION_SECONDS = 30;
+    private static final String DISGUISE_SKIN = "Steve";
 
     private final JavaPlugin plugin;
     private final RoleManager roleManager;
@@ -121,6 +122,7 @@ public class RoundManager {
     }
 
     public void onPlayerDeathOrLeave() {
+        cleanupDisguisesForInactivePlayers();
         checkWinConditions();
     }
 
@@ -147,6 +149,20 @@ public class RoundManager {
 
     public int getRemainingSeconds() {
         return remainingSeconds;
+    }
+
+    public long countAliveManiacs() {
+        return getAlivePlayers().stream().filter(roleManager::isManiac).count();
+    }
+
+    public long countAliveCivilians() {
+        return getAlivePlayers().stream().filter(roleManager::isCivilian).count();
+    }
+
+    public long countSpectators() {
+        return Bukkit.getOnlinePlayers().stream()
+                .filter(player -> player.getGameMode() == GameMode.SPECTATOR || player.isDead())
+                .count();
     }
 
     public void setRemainingSeconds(int seconds) {
@@ -254,10 +270,21 @@ public class RoundManager {
     private void applyDisguises() {
         cancelDisguises();
         for (Player player : getAlivePlayers()) {
-            PlayerDisguise disguise = new PlayerDisguise(player);
+            PlayerDisguise disguise = new PlayerDisguise(DISGUISE_SKIN);
+            disguise.setSkin(DISGUISE_SKIN);
+            disguise.setName(DISGUISE_SKIN);
             disguise.setNameVisible(false);
             DisguiseAPI.disguiseToAll(player, disguise);
             activeDisguises.put(player.getUniqueId(), disguise);
+        }
+    }
+
+    public void removeDisguise(Player player) {
+        if (player == null) {
+            return;
+        }
+        if (activeDisguises.remove(player.getUniqueId()) != null) {
+            DisguiseAPI.undisguiseToAll(player);
         }
     }
 
@@ -299,10 +326,23 @@ public class RoundManager {
     }
 
     public List<Player> getAlivePlayers() {
+        cleanupDisguisesForInactivePlayers();
         return Bukkit.getOnlinePlayers().stream()
                 .filter(player -> player.getGameMode() != GameMode.SPECTATOR)
                 .filter(player -> !player.isDead())
                 .collect(Collectors.toList());
+    }
+
+    private void cleanupDisguisesForInactivePlayers() {
+        for (UUID uuid : new ArrayList<>(activeDisguises.keySet())) {
+            Player player = Bukkit.getPlayer(uuid);
+            if (player == null || player.getGameMode() == GameMode.SPECTATOR || player.isDead()) {
+                if (player != null) {
+                    DisguiseAPI.undisguiseToAll(player);
+                }
+                activeDisguises.remove(uuid);
+            }
+        }
     }
 
     private void cancelTimer() {

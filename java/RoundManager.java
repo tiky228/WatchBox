@@ -1,7 +1,7 @@
 package com.watchbox.maniac;
 
-import me.libraryaddict.disguise.DisguiseAPI;
-import me.libraryaddict.disguise.disguisetypes.PlayerDisguise;
+import me.libraryaddict.disguises.DisguiseAPI;
+import me.libraryaddict.disguises.disguises.PlayerDisguise;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Bukkit;
@@ -243,10 +243,11 @@ public class RoundManager {
     private void applyRoundStartEffects() {
         for (Player player : getAlivePlayers()) {
             player.addPotionEffect(new PotionEffect(PotionEffectType.BLINDNESS, 60, 0, false, false, false));
-            player.showTitle(org.bukkit.Title.title(
-                    Component.text("Round Start", NamedTextColor.RED),
-                    Component.text("Trust no one…", NamedTextColor.DARK_GRAY)
-            ));
+            player.sendTitle(
+                    "Round Start",
+                    "Trust no one.",
+                    10, 40, 10
+            );
             player.playSound(player.getLocation(), Sound.ENTITY_ENDER_DRAGON_GROWL, 1.0f, 1.0f);
         }
     }
@@ -254,7 +255,7 @@ public class RoundManager {
     private void applyDisguises() {
         cancelDisguises();
         for (Player player : getAlivePlayers()) {
-            PlayerDisguise disguise = new PlayerDisguise(player.getName());
+            PlayerDisguise disguise = new PlayerDisguise(player);
             disguise.setNameVisible(false);
             DisguiseAPI.disguiseToAll(player, disguise);
             activeDisguises.put(player.getUniqueId(), disguise);
@@ -276,11 +277,14 @@ public class RoundManager {
         if (manager == null) {
             return;
         }
-        hiddenNameScoreboard = manager.getNewScoreboard();
-        hiddenTeam = hiddenNameScoreboard.registerNewTeam("hidden_names");
+        hiddenNameScoreboard = manager.getMainScoreboard();
+        hiddenTeam = hiddenNameScoreboard.getTeam("hidden_names");
+        if (hiddenTeam == null) {
+            hiddenTeam = hiddenNameScoreboard.registerNewTeam("hidden_names");
+        }
         hiddenTeam.setOption(Team.Option.NAME_TAG_VISIBILITY, Team.OptionStatus.NEVER);
 
-        for (Player player : Bukkit.getOnlinePlayers()) {
+        for (Player player : getAlivePlayers()) {
             hiddenTeam.addEntry(player.getName());
             player.setScoreboard(hiddenNameScoreboard);
         }

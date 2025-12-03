@@ -6,9 +6,6 @@ import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 
-/**
- * Provides info and debug controls for the round timer.
- */
 public class RoundCommand implements CommandExecutor {
     private final RoundManager roundManager;
 
@@ -19,20 +16,24 @@ public class RoundCommand implements CommandExecutor {
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (args.length == 0 || args[0].equalsIgnoreCase("info")) {
-            sender.sendMessage(Component.text("Phase: " + roundManager.getCurrentPhase() + " | Remaining: " + roundManager.getRemainingSeconds() + "s", NamedTextColor.AQUA));
+            sender.sendMessage(Component.text(
+                    "Phase: " + roundManager.getCurrentPhase() + " | Remaining: " + roundManager.getRemainingSeconds() + "s",
+                    NamedTextColor.AQUA));
             return true;
         }
+
         if (args[0].equalsIgnoreCase("time") && args.length >= 2) {
             try {
                 int seconds = Integer.parseInt(args[1]);
                 roundManager.setRemainingSeconds(seconds);
-                sender.sendMessage(Component.text("Phase time set to " + seconds + "s.", NamedTextColor.GREEN));
+                sender.sendMessage(Component.text("Remaining time set to " + seconds + "s.", NamedTextColor.GREEN));
             } catch (NumberFormatException ex) {
                 sender.sendMessage(Component.text("Invalid number.", NamedTextColor.RED));
             }
             return true;
         }
-        sender.sendMessage(Component.text("Unknown usage.", NamedTextColor.RED));
+
+        sender.sendMessage(Component.text("Usage: /" + label + " info|time <seconds>", NamedTextColor.YELLOW));
         return true;
     }
 }

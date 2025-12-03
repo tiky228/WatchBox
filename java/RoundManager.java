@@ -1,7 +1,7 @@
 package com.watchbox.maniac;
 
-import me.libraryaddict.disguises.DisguiseAPI;
-import me.libraryaddict.disguises.disguises.PlayerDisguise;
+import me.libraryaddict.disguise.DisguiseAPI;
+import me.libraryaddict.disguise.disguisetypes.PlayerDisguise;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Bukkit;
@@ -10,6 +10,7 @@ import org.bukkit.Material;
 import org.bukkit.Sound;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
@@ -81,13 +82,14 @@ public class RoundManager {
         taskManager.resetLanterns();
 
         prepareParticipants();
-        assignRoles();
-        giveStartingSigns();
-        applyRoundStartEffects();
-        applyDisguises();
-        setupHiddenNameTeam();
+        if (assignRoles()) {
+            giveStartingSigns();
+            applyRoundStartEffects();
+            applyDisguises();
+            setupHiddenNameTeam();
 
-        setPhase(RoundPhase.ROUND_START, 3);
+            setPhase(RoundPhase.ROUND_START, 3);
+        }
     }
 
     public void endRound() {
@@ -109,9 +111,13 @@ public class RoundManager {
             case DISCUSSION -> enterVotingPhase();
             case VOTING -> enterRoundEndPhase();
             case ROUND_END -> endRound();
-            default -> {
+            case PRE_ROUND -> {
             }
         }
+    }
+
+    public void forcePhase(RoundPhase phase, int seconds) {
+        setPhase(phase, seconds);
     }
 
     public void onPlayerDeathOrLeave() {
@@ -121,7 +127,7 @@ public class RoundManager {
     public void checkWinConditions() {
         List<Player> alivePlayers = getAlivePlayers();
         long maniacsAlive = alivePlayers.stream().filter(roleManager::isManiac).count();
-        long nonManiacsAlive = alivePlayers.stream().filter(p -> !roleManager.isManiac(p)).count();
+        long nonManiacsAlive = alivePlayers.stream().filter(player -> !roleManager.isManiac(player)).count();
 
         if (maniacsAlive <= 0) {
             Bukkit.broadcast(Component.text("Innocents win!", NamedTextColor.AQUA));
@@ -143,6 +149,10 @@ public class RoundManager {
         return remainingSeconds;
     }
 
+    public void setRemainingSeconds(int seconds) {
+        remainingSeconds = Math.max(0, seconds);
+    }
+
     private void setPhase(RoundPhase phase, int durationSeconds) {
         cancelTimer();
         currentPhase = phase;
@@ -156,17 +166,8 @@ public class RoundManager {
                 if (remainingSeconds > 0) {
                     return;
                 }
-
                 cancelTimer();
-                switch (currentPhase) {
-                    case ROUND_START -> enterActionPhase();
-                    case ACTION -> enterDiscussionPhase();
-                    case DISCUSSION -> enterVotingPhase();
-                    case VOTING -> enterRoundEndPhase();
-                    case ROUND_END -> endRound();
-                    default -> {
-                    }
-                }
+                advancePhase();
             }
         }.runTaskTimer(plugin, 20L, 20L);
     }
@@ -215,10 +216,11 @@ public class RoundManager {
         }
     }
 
-    private void assignRoles() {
+    private boolean assignRoles() {
         List<Player> players = new ArrayList<>(getAlivePlayers());
         if (players.isEmpty()) {
-            return;
+            plugin.getLogger().warning("No players available to start a round.");
+            return false;
         }
 
         Collections.shuffle(players);
@@ -227,27 +229,24 @@ public class RoundManager {
         for (int i = 1; i < players.size(); i++) {
             roleManager.assignRole(players.get(i), Role.CIVILIAN);
         }
+        return true;
     }
 
     private void giveStartingSigns() {
         ItemStack signs = new ItemStack(Material.OAK_SIGN, 6);
         for (Player player : getAlivePlayers()) {
-            taskManager.giveStartingSigns(player);
-            if (player.getInventory().containsAtLeast(signs, 6)) {
+            PlayerInventory inventory = player.getInventory();
+            if (inventory.firstEmpty() == -1 && !inventory.containsAtLeast(signs, 6)) {
                 continue;
             }
-            player.getInventory().addItem(signs.clone());
+            inventory.addItem(signs.clone());
         }
     }
 
     private void applyRoundStartEffects() {
         for (Player player : getAlivePlayers()) {
             player.addPotionEffect(new PotionEffect(PotionEffectType.BLINDNESS, 60, 0, false, false, false));
-            player.sendTitle(
-                    "Round Start",
-                    "Trust no one.",
-                    10, 40, 10
-            );
+            player.sendTitle("Round Start", "Trust no one.", 10, 40, 10);
             player.playSound(player.getLocation(), Sound.ENTITY_ENDER_DRAGON_GROWL, 1.0f, 1.0f);
         }
     }
@@ -286,30 +285,23 @@ public class RoundManager {
 
         for (Player player : getAlivePlayers()) {
             hiddenTeam.addEntry(player.getName());
-            player.setScoreboard(hiddenNameScoreboard);
         }
     }
 
     private void clearHiddenNameTeam() {
-        ScoreboardManager manager = Bukkit.getScoreboardManager();
-        if (manager == null) {
-            return;
-        }
-        Scoreboard main = manager.getMainScoreboard();
-        for (Player player : Bukkit.getOnlinePlayers()) {
-            player.setScoreboard(main);
-        }
         if (hiddenTeam != null) {
-            hiddenTeam.unregister();
-            hiddenTeam = null;
+            for (String entry : new ArrayList<>(hiddenTeam.getEntries())) {
+                hiddenTeam.removeEntry(entry);
+            }
         }
+        hiddenTeam = null;
         hiddenNameScoreboard = null;
     }
 
-    private List<Player> getAlivePlayers() {
+    public List<Player> getAlivePlayers() {
         return Bukkit.getOnlinePlayers().stream()
-                .filter(p -> p.getGameMode() != GameMode.SPECTATOR)
-                .filter(p -> !p.isDead())
+                .filter(player -> player.getGameMode() != GameMode.SPECTATOR)
+                .filter(player -> !player.isDead())
                 .collect(Collectors.toList());
     }
 

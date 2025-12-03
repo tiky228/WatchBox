@@ -2,211 +2,94 @@ package com.watchbox.maniac;
 
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
-import org.bukkit.Bukkit;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
-import org.bukkit.entity.Player;
 
-
-/**
- * Debug command for testing the Maniac mode.
- */
 public class ManiacDebugCommand implements CommandExecutor {
-    private final RoleManager roleManager;
-    private final MarkManager markManager;
-    private final SilenceManager silenceManager;
-    private final TaskManager taskManager;
     private final RoundManager roundManager;
-    private final ManiacAbilityManager abilityManager;
-    private final DebugBookFactory debugBookFactory;
-    private final VoteManager voteManager;
-    private final long silenceDuration;
-    private final long normalCooldown;
-    private final long empoweredCooldown;
-    private final boolean empoweredEnabled;
 
-    public ManiacDebugCommand(RoleManager roleManager, MarkManager markManager, SilenceManager silenceManager,
-                              TaskManager taskManager, RoundManager roundManager, ManiacAbilityManager abilityManager,
-                              DebugBookFactory debugBookFactory, VoteManager voteManager,
-                              long silenceDuration, long normalCooldown, long empoweredCooldown, boolean empoweredEnabled) {
-        this.roleManager = roleManager;
-        this.markManager = markManager;
-        this.silenceManager = silenceManager;
-        this.taskManager = taskManager;
+    public ManiacDebugCommand(RoundManager roundManager) {
         this.roundManager = roundManager;
-        this.abilityManager = abilityManager;
-        this.debugBookFactory = debugBookFactory;
-        this.voteManager = voteManager;
-        this.silenceDuration = silenceDuration;
-        this.normalCooldown = normalCooldown;
-        this.empoweredCooldown = empoweredCooldown;
-        this.empoweredEnabled = empoweredEnabled;
     }
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-        if (!(sender.isOp() || sender instanceof org.bukkit.command.ConsoleCommandSender)) {
+        if (!(sender.isOp() || !(sender instanceof org.bukkit.entity.Player))) {
             sender.sendMessage(Component.text("Operator permission required.", NamedTextColor.RED));
             return true;
         }
+
         if (args.length == 0) {
-            sender.sendMessage(Component.text("Usage: start|stop|phase|nextphase|mark|emark|clearmarks|silence|lanterns|bells|listmarks|book", NamedTextColor.YELLOW));
+            sendUsage(sender, label);
             return true;
         }
+
         switch (args[0].toLowerCase()) {
-            case "start":
+            case "start" -> {
                 roundManager.startRound();
                 sender.sendMessage(Component.text("Round started.", NamedTextColor.GREEN));
-                return true;
-            case "stop":
-                roundManager.stopRound();
-                sender.sendMessage(Component.text("Round stopped.", NamedTextColor.RED));
-                return true;
-            case "nextphase":
+            }
+            case "stop" -> {
+                roundManager.endRound();
+                sender.sendMessage(Component.text("Round ended.", NamedTextColor.RED));
+            }
+            case "nextphase" -> {
                 roundManager.advancePhase();
                 sender.sendMessage(Component.text("Advanced to next phase.", NamedTextColor.GREEN));
-                return true;
-            case "phase":
-                if (args.length >= 2) {
-                    RoundPhase phase = parsePhase(args[1]);
-                    if (phase == null) {
-                        sender.sendMessage(Component.text("Unknown phase.", NamedTextColor.RED));
-                        return true;
-                    }
-                    int time = args.length >= 3 ? Integer.parseInt(args[2]) : roundManager.getRemainingSeconds();
-                    roundManager.forcePhase(phase, time);
-                    sender.sendMessage(Component.text("Phase forced to " + phase + ".", NamedTextColor.GREEN));
-                } else {
-                    sender.sendMessage(Component.text("Usage: /" + label + " phase <preround|start|action|discussion|voting|end> [seconds]", NamedTextColor.YELLOW));
-                }
-                return true;
-            case "mark":
-                Player target = Bukkit.getPlayer(args.length >= 2 ? args[1] : "");
-                if (target == null) {
-                    sender.sendMessage(Component.text("Player not found.", NamedTextColor.RED));
-                    return true;
-                }
-                if (sender instanceof Player) {
-                    Player playerSender = (Player) sender;
-                    if (abilityManager.isOnCooldown(playerSender, ManiacAbilityManager.Ability.NORMAL_MARK, normalCooldown)) {
-                        long remain = abilityManager.remainingMs(playerSender, ManiacAbilityManager.Ability.NORMAL_MARK) / 1000L;
-                        sender.sendMessage(Component.text("Normal mark on cooldown for " + remain + "s.", NamedTextColor.RED));
-                        return true;
-                    }
-                    abilityManager.triggerCooldown(playerSender, ManiacAbilityManager.Ability.NORMAL_MARK, normalCooldown);
-                }
-                markManager.addNormalMark(target, 1);
-                sender.sendMessage(Component.text("Added normal mark to " + target.getName() + ".", NamedTextColor.GREEN));
-                return true;
-            case "emark":
-                if (!empoweredEnabled) {
-                    sender.sendMessage(Component.text("Empowered marks are disabled in config.", NamedTextColor.RED));
-                    return true;
-                }
-                Player etarget = Bukkit.getPlayer(args.length >= 2 ? args[1] : "");
-                if (etarget == null) {
-                    sender.sendMessage(Component.text("Player not found.", NamedTextColor.RED));
-                    return true;
-                }
-                if (sender instanceof Player) {
-                    Player playerSender = (Player) sender;
-                    if (abilityManager.isOnCooldown(playerSender, ManiacAbilityManager.Ability.EMPOWERED_MARK, empoweredCooldown)) {
-                        long remain = abilityManager.remainingMs(playerSender, ManiacAbilityManager.Ability.EMPOWERED_MARK) / 1000L;
-                        sender.sendMessage(Component.text("Empowered mark on cooldown for " + remain + "s.", NamedTextColor.RED));
-                        return true;
-                    }
-                    abilityManager.triggerCooldown(playerSender, ManiacAbilityManager.Ability.EMPOWERED_MARK, empoweredCooldown);
-                }
-                markManager.addEmpoweredMark(etarget, 1);
-                sender.sendMessage(Component.text("Added empowered mark to " + etarget.getName() + ".", NamedTextColor.GREEN));
-                return true;
-            case "clearmarks":
-                Player ctarget = Bukkit.getPlayer(args.length >= 2 ? args[1] : "");
-                if (ctarget == null) {
-                    sender.sendMessage(Component.text("Player not found.", NamedTextColor.RED));
-                    return true;
-                }
-                markManager.clearAllMarks(ctarget);
-                sender.sendMessage(Component.text("Cleared marks for " + ctarget.getName() + ".", NamedTextColor.GREEN));
-                return true;
-            case "listmarks":
-                if (markManager.getAllMarks().isEmpty()) {
-                    sender.sendMessage(Component.text("No players are marked.", NamedTextColor.GRAY));
-                    return true;
-                }
-                markManager.getAllMarks().forEach((uuid, counts) -> {
-                    Player online = Bukkit.getPlayer(uuid);
-                    String name = online != null ? online.getName() : uuid.toString();
-                    sender.sendMessage(Component.text(name + " - Normal:" + counts.normal + " Empowered:" + counts.empowered, NamedTextColor.YELLOW));
-                });
-                return true;
-            case "silence":
-                Player starget = Bukkit.getPlayer(args.length >= 2 ? args[1] : "");
-                if (starget == null) {
-                    sender.sendMessage(Component.text("Player not found.", NamedTextColor.RED));
-                    return true;
-                }
-                if (markManager.getTotalMarks(starget) <= 0) {
-                    sender.sendMessage(Component.text("Target must have at least one mark to be silenced.", NamedTextColor.RED));
-                    return true;
-                }
-                silenceManager.silence(starget, silenceDuration);
-                sender.sendMessage(Component.text("Silenced " + starget.getName() + " for sign writing.", NamedTextColor.RED));
-                return true;
-            case "book":
-                Player bookTarget;
-                if (args.length >= 2) {
-                    bookTarget = Bukkit.getPlayer(args[1]);
-                    if (bookTarget == null) {
-                        sender.sendMessage(Component.text("Player not found.", NamedTextColor.RED));
-                        return true;
-                    }
-                } else {
-                    if (!(sender instanceof Player)) {
-                        sender.sendMessage(Component.text("Specify a player.", NamedTextColor.RED));
-                        return true;
-                    }
-                    bookTarget = (Player) sender;
-                }
-                bookTarget.getInventory().addItem(debugBookFactory.createDebugBook());
-                sender.sendMessage(Component.text("Debug book created.", NamedTextColor.GREEN));
-                return true;
-            case "lanterns":
-                if (args.length >= 2 && args[1].equalsIgnoreCase("reset")) {
-                    taskManager.resetLanterns();
-                    sender.sendMessage(Component.text("Lanterns reset.", NamedTextColor.GREEN));
-                }
-                return true;
-            case "bells":
-                if (args.length >= 2 && args[1].equalsIgnoreCase("test")) {
-                    if (sender instanceof Player) {
-                        taskManager.handleBellInteract((Player) sender, ((Player) sender).getLocation());
-                    }
-                }
-                return true;
-            default:
-                sender.sendMessage(Component.text("Unknown subcommand.", NamedTextColor.RED));
-                return true;
+            }
+            case "phase" -> handlePhaseCommand(sender, label, args);
+            case "time" -> handleTimeCommand(sender, args);
+            default -> sendUsage(sender, label);
+        }
+        return true;
+    }
+
+    private void handlePhaseCommand(CommandSender sender, String label, String[] args) {
+        if (args.length == 1) {
+            sender.sendMessage(Component.text(
+                    "Current phase: " + roundManager.getCurrentPhase() + " | Remaining: " + roundManager.getRemainingSeconds() + "s",
+                    NamedTextColor.AQUA));
+            return;
+        }
+
+        RoundPhase phase;
+        try {
+            phase = RoundPhase.valueOf(args[1].toUpperCase());
+        } catch (IllegalArgumentException ex) {
+            sender.sendMessage(Component.text("Unknown phase.", NamedTextColor.RED));
+            return;
+        }
+
+        int seconds = roundManager.getRemainingSeconds();
+        if (args.length >= 3) {
+            try {
+                seconds = Integer.parseInt(args[2]);
+            } catch (NumberFormatException ex) {
+                sender.sendMessage(Component.text("Invalid seconds value.", NamedTextColor.RED));
+                return;
+            }
+        }
+
+        roundManager.forcePhase(phase, seconds);
+        sender.sendMessage(Component.text("Forced phase to " + phase + " for " + seconds + "s.", NamedTextColor.GREEN));
+    }
+
+    private void handleTimeCommand(CommandSender sender, String[] args) {
+        if (args.length < 2) {
+            sender.sendMessage(Component.text("Usage: /maniacdebug time <seconds>", NamedTextColor.YELLOW));
+            return;
+        }
+        try {
+            int seconds = Integer.parseInt(args[1]);
+            roundManager.setRemainingSeconds(seconds);
+            sender.sendMessage(Component.text("Remaining time set to " + seconds + "s.", NamedTextColor.GREEN));
+        } catch (NumberFormatException ex) {
+            sender.sendMessage(Component.text("Invalid seconds value.", NamedTextColor.RED));
         }
     }
 
-    private RoundPhase parsePhase(String raw) {
-        switch (raw.toLowerCase()) {
-            case "preround":
-                return RoundPhase.PRE_ROUND;
-            case "start":
-                return RoundPhase.ROUND_START;
-            case "action":
-                return RoundPhase.ACTION;
-            case "discussion":
-                return RoundPhase.DISCUSSION;
-            case "voting":
-                return RoundPhase.VOTING;
-            case "end":
-                return RoundPhase.ROUND_END;
-            default:
-                return null;
-        }
+    private void sendUsage(CommandSender sender, String label) {
+        sender.sendMessage(Component.text("Usage: /" + label + " start|stop|nextphase|phase [phase] [seconds]|time <seconds>", NamedTextColor.YELLOW));
     }
 }

@@ -1,70 +1,96 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+
     <modelVersion>4.0.0</modelVersion>
+
     <groupId>com.watchbox</groupId>
     <artifactId>watchbox-maniac</artifactId>
     <version>1.0-SNAPSHOT</version>
     <packaging>jar</packaging>
 
+    <!-- Java 17 -->
     <properties>
         <maven.compiler.source>17</maven.compiler.source>
         <maven.compiler.target>17</maven.compiler.target>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
 
     <build>
-        <sourceDirectory>java</sourceDirectory>
+        <sourceDirectory>src/main/java</sourceDirectory>
         <resources>
             <resource>
-                <directory>resources</directory>
+                <directory>src/main/resources</directory>
             </resource>
         </resources>
+
+        <plugins>
+            <!-- Можно оставить для будущего shading-а, но он не обязателен -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-shade-plugin</artifactId>
+                <version>3.4.1</version>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>shade</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
     </build>
 
+    <!-- Репозитории -->
     <repositories>
+        <!-- PaperMC -->
         <repository>
             <id>papermc</id>
             <url>https://repo.papermc.io/repository/maven-public/</url>
         </repository>
+
+        <!-- Maven Central -->
         <repository>
-            <id>central-repo1</id>
+            <id>central</id>
             <url>https://repo.maven.apache.org/maven2/</url>
         </repository>
+
+        <!-- LibsDisguises -->
         <repository>
-            <id>dmulloy2</id>
-            <url>https://repo.dmulloy2.net/repository/public/</url>
+            <id>libsdisguises-public</id>
+            <url>https://mvn.lib.co.nz/public</url>
         </repository>
     </repositories>
 
-    <pluginRepositories>
-        <pluginRepository>
-            <id>central-repo1</id>
-            <url>https://repo.maven.apache.org/maven2/</url>
-        </pluginRepository>
-        <pluginRepository>
-            <id>papermc</id>
-            <url>https://repo.papermc.io/repository/maven-public/</url>
-        </pluginRepository>
-    </pluginRepositories>
-
+    <!-- Зависимости -->
     <dependencies>
+
+        <!-- Paper API -->
         <dependency>
             <groupId>io.papermc.paper</groupId>
             <artifactId>paper-api</artifactId>
             <version>1.20.4-R0.1-SNAPSHOT</version>
             <scope>provided</scope>
         </dependency>
+
+        <!-- ProtocolLib (из Maven Central) -->
         <dependency>
-            <groupId>com.comphenix.protocol</groupId>
+            <groupId>net.dmulloy2</groupId>
             <artifactId>ProtocolLib</artifactId>
-            <version>5.1.0</version>
+            <version>5.4.0</version>
             <scope>provided</scope>
         </dependency>
+
+        <!-- LibsDisguises -->
         <dependency>
-            <groupId>LibsDisguises</groupId>
-            <artifactId>LibsDisguises</artifactId>
-            <version>10.0.39</version>
+            <groupId>me.libraryaddict.disguises</groupId>
+            <artifactId>libsdisguises</artifactId>
+            <version>11.0.13</version> <!-- та же версия, что у jar в plugins -->
             <scope>provided</scope>
         </dependency>
+
+
     </dependencies>
+
 </project>

@@ -32,6 +32,7 @@ public class TestPlugin extends JavaPlugin {
         taskManager.loadFromConfig(getConfig());
         markTokenManager = new MarkTokenManager(this, roleManager, markManager);
         roundManager = new RoundManager(this, roleManager, markManager, taskManager, markTokenManager);
+        markTokenManager.setRoundManager(roundManager);
         voteManager = new VoteManager(this, roleManager, roundManager);
         roundManager.setVoteManager(voteManager);
         debugBookFactory = new DebugBookFactory(this, roundManager, roleManager, markManager);

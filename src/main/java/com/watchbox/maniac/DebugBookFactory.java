@@ -47,7 +47,8 @@ public class DebugBookFactory {
         meta.title(Component.text("Debug Controls", NamedTextColor.AQUA));
         meta.author(Component.text("WatchBox"));
 
-        meta.pages(buildPages());
+        List<Component> pages = buildPages();
+        meta.pages(pages.toArray(new Component[0]));
         meta.getPersistentDataContainer().set(debugKey, PersistentDataType.BYTE, (byte) 1);
         book.setItemMeta(meta);
         return book;
@@ -108,6 +109,17 @@ public class DebugBookFactory {
             markManager.clearAll();
             viewer.sendMessage(Component.text("All marks cleared.", NamedTextColor.RED));
         }));
+
+        // Provide a dedicated page that lists nicknames to ensure they are visible in-game.
+        builder.newPage();
+        builder.addHeading("Nicknames", NamedTextColor.GOLD);
+        if (players.isEmpty()) {
+            builder.addLine(Component.text("No players online.", NamedTextColor.GRAY));
+        } else {
+            for (Player player : players) {
+                builder.addLine(Component.text(player.getName(), NamedTextColor.GRAY));
+            }
+        }
 
         return builder.build();
     }

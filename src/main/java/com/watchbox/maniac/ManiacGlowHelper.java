@@ -6,7 +6,6 @@ import com.comphenix.protocol.ProtocolManager;
 import com.comphenix.protocol.events.ListenerPriority;
 import com.comphenix.protocol.events.PacketAdapter;
 import com.comphenix.protocol.events.PacketEvent;
-import com.comphenix.protocol.wrappers.WrappedDataWatcher;
 import com.comphenix.protocol.wrappers.WrappedWatchableObject;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
@@ -42,7 +41,6 @@ public class ManiacGlowHelper {
         }
         Set<Integer> ids = new HashSet<>();
         for (Player target : marked) {
-            target.setGlowing(true);
             ids.add(target.getEntityId());
             glowingEntities.add(target.getEntityId());
         }
@@ -50,10 +48,7 @@ public class ManiacGlowHelper {
 
         Bukkit.getScheduler().runTaskLater(plugin, () -> {
             viewerTargets.remove(maniac.getUniqueId());
-            for (Player target : marked) {
-                target.setGlowing(false);
-                glowingEntities.remove(target.getEntityId());
-            }
+            ids.forEach(glowingEntities::remove);
         }, durationTicks);
     }
 
@@ -67,30 +62,33 @@ public class ManiacGlowHelper {
     }
 
     private void handleMetadata(PacketEvent event) {
-        int entityId = event.getPacket().getIntegers().read(0);
-        if (!glowingEntities.contains(entityId)) {
-            return;
-        }
-        Player viewer = event.getPlayer();
-        Set<Integer> allowed = viewerTargets.get(viewer.getUniqueId());
-        boolean shouldSeeGlow = allowed != null && allowed.contains(entityId);
-
-        List<WrappedWatchableObject> original = event.getPacket().getWatchableCollectionModifier().read(0);
-        if (original == null) {
-            return;
-        }
-        List<WrappedWatchableObject> modified = new ArrayList<>(original.size());
-        for (WrappedWatchableObject watchable : original) {
-            if (watchable.getIndex() == 0 && watchable.getValue() instanceof Byte) {
-                byte current = (Byte) watchable.getValue();
-                byte updated = shouldSeeGlow ? (byte) (current | 0x40) : (byte) (current & ~0x40);
-                modified.add(new WrappedWatchableObject(watchable.getIndex(), updated));
-            } else if (watchable.getIndex() == 0 && watchable.getValue() instanceof WrappedDataWatcher.Serializer) {
-                modified.add(watchable);
-            } else {
-                modified.add(watchable);
+        try {
+            int entityId = event.getPacket().getIntegers().read(0);
+            if (!glowingEntities.contains(entityId)) {
+                return;
             }
+            Player viewer = event.getPlayer();
+            Set<Integer> allowed = viewerTargets.get(viewer.getUniqueId());
+            boolean shouldSeeGlow = allowed != null && allowed.contains(entityId);
+
+            List<WrappedWatchableObject> original = event.getPacket().getWatchableCollectionModifier().read(0);
+            if (original == null) {
+                return;
+            }
+            List<WrappedWatchableObject> modified = new ArrayList<>(original.size());
+            for (WrappedWatchableObject watchable : original) {
+                if (watchable.getIndex() == 0 && watchable.getValue() instanceof Byte current) {
+                    byte updated = shouldSeeGlow ? (byte) (current | 0x40) : (byte) (current & ~0x40);
+                    modified.add(new WrappedWatchableObject(watchable.getIndex(), updated));
+                } else {
+                    modified.add(watchable);
+                }
+            }
+            event.getPacket().getWatchableCollectionModifier().write(0, modified);
+        } catch (IllegalArgumentException ignored) {
+            // ProtocolLib may not understand some metadata types on newer versions; skip safely.
+        } catch (Exception ex) {
+            plugin.getLogger().fine("Skipped unexpected metadata entry: " + ex.getMessage());
         }
-        event.getPacket().getWatchableCollectionModifier().write(0, modified);
     }
 }

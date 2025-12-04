@@ -158,6 +158,13 @@ public class DebugBookFactory {
         }
     }
 
+    private Component listNames(List<Player> players, NamedTextColor color) {
+        List<Component> names = players.stream()
+                .map(target -> Component.text(target.getName(), color))
+                .collect(Collectors.toList());
+        return Component.join(JoinConfiguration.separator(Component.text(", ", color)), names);
+    }
+
     private Component button(String text, NamedTextColor color, Consumer<Player> action) {
         String actionId = registerAction(action);
         return Component.text("[" + text + "]", color).clickEvent(ClickEvent.runCommand("/maniacdebug " + actionId));

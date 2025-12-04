@@ -25,15 +25,17 @@ public class ManiacCommand implements CommandExecutor {
     private final KillerSignItem killerSignItem;
     private final KillerSignListener killerSignListener;
     private final long silenceDuration;
+    private final RoundManager roundManager;
 
     public ManiacCommand(JavaPlugin plugin, RoleManager roleManager, SilenceManager silenceManager,
-                         ManiacAbilityManager abilityManager, VoteManager voteManager,
+                         ManiacAbilityManager abilityManager, VoteManager voteManager, RoundManager roundManager,
                          KillerSignItem killerSignItem, KillerSignListener killerSignListener, long silenceDuration) {
         this.plugin = plugin;
         this.roleManager = roleManager;
         this.silenceManager = silenceManager;
         this.abilityManager = abilityManager;
         this.voteManager = voteManager;
+        this.roundManager = roundManager;
         this.killerSignItem = killerSignItem;
         this.killerSignListener = killerSignListener;
         this.silenceDuration = silenceDuration;
@@ -42,7 +44,7 @@ public class ManiacCommand implements CommandExecutor {
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (args.length == 0) {
-            sender.sendMessage(Component.text("Usage: votebook|killersign|silence|swap|entityid|showmarks", NamedTextColor.DARK_AQUA));
+            sender.sendMessage(Component.text("Usage: votebook|killersign|silence|swap|entityid|showmarks|debug", NamedTextColor.DARK_AQUA));
             return true;
         }
         switch (args[0].toLowerCase()) {
@@ -68,6 +70,8 @@ public class ManiacCommand implements CommandExecutor {
                 return true;
             case "swap":
                 return handleSwap(sender, args);
+            case "debug":
+                return handleDebug(sender, args);
             default:
                 sender.sendMessage(Component.text("Unknown subcommand.", NamedTextColor.RED));
                 return true;
@@ -218,5 +222,76 @@ public class ManiacCommand implements CommandExecutor {
         sender.sendMessage(message);
         plugin.getLogger().info("/maniac entityId resolved '" + targetName + "' to id " + entityId + " in world " + world.getName());
         return true;
+    }
+
+    private boolean handleDebug(CommandSender sender, String[] args) {
+        if (!sender.hasPermission("watchbox.maniac.debug")) {
+            sender.sendMessage(Component.text("Operator permission required.", NamedTextColor.RED));
+            return true;
+        }
+
+        if (args.length < 3) {
+            sender.sendMessage(Component.text("Usage: /maniac debug <kill|revive|setrole> ...", NamedTextColor.DARK_AQUA));
+            return true;
+        }
+
+        String action = args[1].toLowerCase();
+        switch (action) {
+            case "kill" -> {
+                Player target = Bukkit.getPlayer(args[2]);
+                if (target == null) {
+                    sender.sendMessage(Component.text("Player not found.", NamedTextColor.RED));
+                    return true;
+                }
+                roundManager.eliminatePlayer(target, Component.text(target.getName() + " was eliminated by an admin.", NamedTextColor.RED));
+                sender.sendMessage(Component.text("Eliminated " + target.getName() + ".", NamedTextColor.GREEN));
+                return true;
+            }
+            case "revive" -> {
+                Player target = Bukkit.getPlayer(args[2]);
+                if (target == null) {
+                    sender.sendMessage(Component.text("Player not found.", NamedTextColor.RED));
+                    return true;
+                }
+                roundManager.revivePlayer(target);
+                sender.sendMessage(Component.text("Revived " + target.getName() + ".", NamedTextColor.GREEN));
+                target.sendMessage(Component.text("You have been revived by an admin.", NamedTextColor.AQUA));
+                return true;
+            }
+            case "setrole" -> {
+                if (args.length < 4) {
+                    sender.sendMessage(Component.text("Usage: /maniac debug setrole <maniac|civilian> <player>", NamedTextColor.DARK_AQUA));
+                    return true;
+                }
+                Role role = parseDebugRole(args[2]);
+                if (role == null) {
+                    sender.sendMessage(Component.text("Unknown role. Use maniac or civilian.", NamedTextColor.RED));
+                    return true;
+                }
+                Player target = Bukkit.getPlayer(args[3]);
+                if (target == null) {
+                    sender.sendMessage(Component.text("Player not found.", NamedTextColor.RED));
+                    return true;
+                }
+                roleManager.assignRole(target, role);
+                sender.sendMessage(Component.text("Set role of " + target.getName() + " to " + role + ".", NamedTextColor.GREEN));
+                target.sendMessage(Component.text("Your role was set to " + role + " by an admin.", NamedTextColor.YELLOW));
+                return true;
+            }
+            default -> {
+                sender.sendMessage(Component.text("Unknown debug action.", NamedTextColor.RED));
+                return true;
+            }
+        }
+    }
+
+    private Role parseDebugRole(String input) {
+        if (input.equalsIgnoreCase("maniac")) {
+            return Role.MANIAC;
+        }
+        if (input.equalsIgnoreCase("civilian")) {
+            return Role.CIVILIAN;
+        }
+        return null;
     }
 }

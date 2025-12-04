@@ -98,12 +98,31 @@ public class DebugBookFactory {
 
     private Component buildManipulationPage() {
         List<Component> lines = new ArrayList<>();
-        lines.add(Component.text("Manipulation", NamedTextColor.GOLD));
-        lines.add(Component.text("Click the button below to close the book and print live manipulation info to chat.", NamedTextColor.GRAY));
+        lines.add(Component.text("Player Controls", NamedTextColor.GOLD));
+        lines.add(Component.text("Click an action to affect a player.", NamedTextColor.GRAY));
         lines.add(Component.empty());
-        lines.add(Component.text("[Open manipulation commands]", NamedTextColor.AQUA)
-                .clickEvent(ClickEvent.runCommand("/maniacdebug manip")));
-        lines.add(Component.text("The chat output always uses the latest game state.", NamedTextColor.DARK_GRAY));
+
+        List<Player> players = new ArrayList<>(Bukkit.getOnlinePlayers());
+        players.sort(Comparator.comparing(Player::getName, String.CASE_INSENSITIVE_ORDER));
+
+        if (players.isEmpty()) {
+            lines.add(Component.text("No players online.", NamedTextColor.GRAY));
+        }
+
+        for (Player player : players) {
+            String name = player.getName();
+            Component line = Component.text(name, NamedTextColor.GRAY)
+                    .append(Component.space())
+                    .append(manipulationButton("KILL", NamedTextColor.RED, "/maniac debug kill " + name))
+                    .append(Component.space())
+                    .append(manipulationButton("REVIVE", NamedTextColor.GREEN, "/maniac debug revive " + name))
+                    .append(Component.space())
+                    .append(manipulationButton("SET MANIAC", NamedTextColor.DARK_RED, "/maniac debug setrole maniac " + name))
+                    .append(Component.space())
+                    .append(manipulationButton("SET CIVILIAN", NamedTextColor.AQUA, "/maniac debug setrole civilian " + name));
+            lines.add(line);
+        }
+
         return joinLines(lines);
     }
 
@@ -208,6 +227,11 @@ public class DebugBookFactory {
     private Component button(String text, NamedTextColor color, Consumer<Player> action) {
         String actionId = registerAction(action);
         return Component.text("[" + text + "]", color).clickEvent(ClickEvent.runCommand("/maniacdebug " + actionId));
+    }
+
+    private Component manipulationButton(String text, NamedTextColor color, String command) {
+        return Component.text("[" + text + "]", color, TextDecoration.BOLD)
+                .clickEvent(ClickEvent.runCommand(command));
     }
 
     private String registerAction(Consumer<Player> action) {

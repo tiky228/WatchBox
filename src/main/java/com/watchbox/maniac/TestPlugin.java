@@ -58,7 +58,7 @@ public class TestPlugin extends JavaPlugin {
             getCommand("round").setExecutor(new RoundCommand(roundManager));
         }
         if (getCommand("maniac") != null) {
-            getCommand("maniac").setExecutor(new ManiacCommand(this, roleManager, silenceManager, abilityManager, voteManager, killerSignItem, killerSignListener, silenceDuration));
+            getCommand("maniac").setExecutor(new ManiacCommand(this, roleManager, silenceManager, abilityManager, voteManager, roundManager, killerSignItem, killerSignListener, silenceDuration));
         }
         if (getCommand("vote") != null) {
             getCommand("vote").setExecutor(new VoteCommand(voteManager));
@@ -74,6 +74,7 @@ public class TestPlugin extends JavaPlugin {
         getServer().getPluginManager().registerEvents(killerSignListener, this);
         getServer().getPluginManager().registerEvents(new DebugBookListener(debugBookFactory), this);
         getServer().getPluginManager().registerEvents(markTokenManager, this);
+        getServer().getPluginManager().registerEvents(new ChatPhaseListener(roundManager), this);
 
         getLogger().info("Watchbox Maniac test plugin enabled.");
     }

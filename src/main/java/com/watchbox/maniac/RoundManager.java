@@ -59,6 +59,7 @@ public class RoundManager {
     private Team hiddenTeam;
     private final Map<UUID, ItemStack[]> savedInventories = new HashMap<>();
     private final Map<UUID, ItemStack[]> savedArmor = new HashMap<>();
+    private boolean skipInventoryRestore;
 
     private static class RoundMarkState {
         private boolean usedMarkToken;
@@ -127,8 +128,12 @@ public class RoundManager {
         }
         cancelDisguises();
         clearHiddenNameTeam();
-        restoreInventories();
-        clearSavedInventories();
+        if (!skipInventoryRestore) {
+            restoreInventories();
+        } else {
+            clearSavedInventories();
+        }
+        skipInventoryRestore = false;
         markTokenManager.removeTokensFromAll();
         roleManager.clear();
         markManager.clearAll();
@@ -187,6 +192,9 @@ public class RoundManager {
                 ? Component.text("The Maniac wins!", NamedTextColor.RED)
                 : Component.text("Innocents win!", NamedTextColor.AQUA);
         Bukkit.broadcast(announcement);
+
+        skipInventoryRestore = true;
+        resetPlayersForPregame();
         endRound();
     }
 
@@ -249,7 +257,7 @@ public class RoundManager {
         clearHiddenNameTeam();
         saveAndClearInventories();
         setPhase(RoundPhase.DISCUSSION, discussionPhaseDuration);
-        executeMarkedPlayers();
+        eliminateMarkedPlayersAtDiscussion();
         if (currentPhase == RoundPhase.PRE_ROUND) {
             return;
         }
@@ -281,7 +289,7 @@ public class RoundManager {
         for (Player player : getAlivePlayers()) {
             int total = markManager.getTotalMarks(player);
             if (total >= maxMarksBeforeDeath) {
-                player.setHealth(0.0);
+                eliminatePlayer(player, Component.text(player.getName() + " succumbed to accumulated marks!", NamedTextColor.RED));
             }
         }
         checkWinConditions();
@@ -485,7 +493,7 @@ public class RoundManager {
         roundMarkStates.clear();
     }
 
-    private void executeMarkedPlayers() {
+    private void eliminateMarkedPlayersAtDiscussion() {
         List<Player> targets = getMarkedPlayersThisRound();
         if (targets.isEmpty()) {
             return;
@@ -495,19 +503,9 @@ public class RoundManager {
             if (target.getGameMode() == GameMode.SPECTATOR || target.isDead()) {
                 continue;
             }
-            eliminateMarkedPlayer(target);
+            eliminatePlayer(target, Component.text(target.getName() + " succumbed to the Maniac's mark!", NamedTextColor.RED));
         }
         clearMarkedTargets();
-        onPlayerDeathOrLeave();
-    }
-
-    private void eliminateMarkedPlayer(Player target) {
-        removeDisguise(target);
-        target.setHealth(0.0);
-        target.setGameMode(GameMode.SPECTATOR);
-        markManager.clearAllMarks(target);
-        markManager.removeMarkedEntity(target);
-        Bukkit.broadcast(Component.text(target.getName() + " succumbed to the Maniac's mark!", NamedTextColor.RED));
     }
 
     public List<Player> getMarkedPlayersThisRound() {
@@ -544,6 +542,41 @@ public class RoundManager {
                 }
             }
         }
+    }
+
+    private void resetPlayersForPregame() {
+        for (Player player : Bukkit.getOnlinePlayers()) {
+            player.getInventory().clear();
+            player.getInventory().setArmorContents(null);
+            player.getInventory().setItemInOffHand(null);
+            player.setGameMode(GameMode.SURVIVAL);
+        }
+    }
+
+    public void eliminatePlayer(Player target, Component message) {
+        if (target == null || target.getGameMode() == GameMode.SPECTATOR) {
+            return;
+        }
+        removeDisguise(target);
+        target.setGameMode(GameMode.SPECTATOR);
+        markManager.clearAllMarks(target);
+        markManager.removeMarkedEntity(target);
+        if (message != null) {
+            Bukkit.broadcast(message);
+        }
+        onPlayerDeathOrLeave();
+    }
+
+    public void revivePlayer(Player target) {
+        if (target == null) {
+            return;
+        }
+        removeDisguise(target);
+        target.setGameMode(GameMode.ADVENTURE);
+        target.setHealth(target.getMaxHealth());
+        target.setFoodLevel(20);
+        markManager.clearAllMarks(target);
+        markManager.removeMarkedEntity(target);
     }
 
     private void saveAndClearInventories() {

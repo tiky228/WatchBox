@@ -11,7 +11,7 @@ commands:
     usage: /maniacdebug <subcommand>
   maniac:
     description: Maniac gameplay controls and items
-    usage: /maniac <votebook|killersign|silence|swap|showmarks>
+    usage: /maniac <votebook|killersign|silence|swap|showmarks|debug>
   vote:
     description: Cast a vote during the voting phase
     usage: /vote <player>
@@ -27,4 +27,8 @@ commands:
     permission: maniac.debug
 permissions:
   maniac.debug:
+    default: op
+  watchbox.maniac.debug:
+    default: op
+  watchbox.maniac.chat.bypass:
     default: op

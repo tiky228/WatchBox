@@ -68,9 +68,7 @@ public class VoteManager {
             Bukkit.broadcast(Component.text("Top voted player is no longer online.", NamedTextColor.GRAY));
             return;
         }
-        target.setGameMode(GameMode.SPECTATOR);
-        Bukkit.broadcast(Component.text(target.getName() + " was eliminated by vote!", NamedTextColor.RED));
-        roundManager.checkWinConditions();
+        roundManager.eliminatePlayer(target, Component.text(target.getName() + " was eliminated by vote!", NamedTextColor.RED));
     }
 
     public void endVoting() {

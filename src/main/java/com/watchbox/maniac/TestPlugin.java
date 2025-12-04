@@ -38,14 +38,15 @@ public class TestPlugin extends JavaPlugin {
         debugBookFactory = new DebugBookFactory(this, roundManager, roleManager, markManager);
         maniacGlowHelper = new ManiacGlowHelper(this);
         killerSignItem = new KillerSignItem(this);
-        killerSignListener = new KillerSignListener(this, roleManager, markManager, maniacGlowHelper);
+        killerSignListener = new KillerSignListener(this, roleManager, markManager, maniacGlowHelper, roundManager);
+        roundManager.setKillerSignItem(killerSignItem);
 
         long silenceDuration = getConfig().getLong("signSilenceDurationTicks", 200L);
         boolean logSigns = getConfig().getBoolean("logSignsToChat", true);
 
         // Commands
         if (getCommand("maniacdebug") != null) {
-            getCommand("maniacdebug").setExecutor(new ManiacDebugCommand(roundManager));
+            getCommand("maniacdebug").setExecutor(new ManiacDebugCommand(roundManager, debugBookFactory));
         }
         if (getCommand("debugbook") != null) {
             getCommand("debugbook").setExecutor(new DebugBookCommand(debugBookFactory));

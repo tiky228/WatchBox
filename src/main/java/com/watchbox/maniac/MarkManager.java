@@ -64,6 +64,7 @@ public class MarkManager {
 
     public void clearAll() {
         marks.clear();
+        markedEntities.clear();
     }
 
     public void addMarkedEntity(LivingEntity entity) {

@@ -6,6 +6,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -40,7 +41,10 @@ public class RoundManager {
     private final MarkManager markManager;
     private final TaskManager taskManager;
     private final MarkTokenManager markTokenManager;
+    private KillerSignItem killerSignItem;
     private VoteManager voteManager;
+
+    private final Map<UUID, RoundMarkState> roundMarkStates = new HashMap<>();
 
     private RoundPhase currentPhase = RoundPhase.PRE_ROUND;
     private int remainingSeconds = 0;
@@ -55,8 +59,16 @@ public class RoundManager {
     private Team hiddenTeam;
     private final Map<UUID, ItemStack[]> savedInventories = new HashMap<>();
     private final Map<UUID, ItemStack[]> savedArmor = new HashMap<>();
-    private boolean markTokenUsedThisRound = false;
-    private UUID markedPlayerThisRound;
+
+    private static class RoundMarkState {
+        private boolean usedMarkToken;
+        private UUID markedPlayer;
+    }
+
+    public enum WinnerType {
+        MANIAC,
+        INNOCENTS
+    }
 
     public RoundManager(JavaPlugin plugin, RoleManager roleManager, MarkManager markManager, TaskManager taskManager, MarkTokenManager markTokenManager) {
         this.plugin = plugin;
@@ -69,6 +81,10 @@ public class RoundManager {
 
     public void setVoteManager(VoteManager voteManager) {
         this.voteManager = voteManager;
+    }
+
+    public void setKillerSignItem(KillerSignItem killerSignItem) {
+        this.killerSignItem = killerSignItem;
     }
 
     public void reloadDurations() {
@@ -94,7 +110,9 @@ public class RoundManager {
 
         prepareParticipants();
         if (assignRoles()) {
+            announceRoles();
             giveStartingSigns();
+            giveKillerSigns();
             giveMarkTokens();
             applyRoundStartEffects();
 
@@ -136,30 +154,40 @@ public class RoundManager {
 
     public void onPlayerDeathOrLeave() {
         cleanupDisguisesForInactivePlayers();
-        if (markedPlayerThisRound != null) {
-            Player target = Bukkit.getPlayer(markedPlayerThisRound);
-            if (target == null || target.isDead() || target.getGameMode() == GameMode.SPECTATOR) {
-                markedPlayerThisRound = null;
-            }
-        }
-        checkWinConditions();
+        cleanupMarkTargets();
+        checkGameEnd();
     }
 
-    public void checkWinConditions() {
+    public WinnerType checkGameEnd() {
         List<Player> alivePlayers = getAlivePlayers();
         long maniacsAlive = alivePlayers.stream().filter(roleManager::isManiac).count();
         long innocentsAlive = alivePlayers.stream().filter(player -> !roleManager.isManiac(player)).count();
 
         if (maniacsAlive <= 0) {
-            Bukkit.broadcast(Component.text("Innocents win!", NamedTextColor.AQUA));
-            endRound();
-            return;
+            endGameAndReturnToPregame(WinnerType.INNOCENTS);
+            return WinnerType.INNOCENTS;
         }
 
         if (innocentsAlive <= maniacsAlive) {
-            Bukkit.broadcast(Component.text("The Maniac wins!", NamedTextColor.RED));
-            endRound();
+            endGameAndReturnToPregame(WinnerType.MANIAC);
+            return WinnerType.MANIAC;
         }
+        return null;
+    }
+
+    public void checkWinConditions() {
+        checkGameEnd();
+    }
+
+    public void endGameAndReturnToPregame(WinnerType winner) {
+        if (winner == null || currentPhase == RoundPhase.PRE_ROUND) {
+            return;
+        }
+        Component announcement = winner == WinnerType.MANIAC
+                ? Component.text("The Maniac wins!", NamedTextColor.RED)
+                : Component.text("Innocents win!", NamedTextColor.AQUA);
+        Bukkit.broadcast(announcement);
+        endRound();
     }
 
     public RoundPhase getCurrentPhase() {
@@ -217,7 +245,15 @@ public class RoundManager {
     }
 
     private void enterDiscussionPhase() {
+        executeMarkedPlayers();
+        WinnerType winner = checkGameEnd();
+        if (winner != null) {
+            return;
+        }
         resolveMarks();
+        if (currentPhase == RoundPhase.PRE_ROUND) {
+            return;
+        }
         cancelDisguises();
         clearHiddenNameTeam();
         saveAndClearInventories();
@@ -227,7 +263,6 @@ public class RoundManager {
     private void enterVotingPhase() {
         cancelDisguises();
         clearHiddenNameTeam();
-        executeMarkedPlayer();
         clearInventoriesForAlivePlayers();
         if (voteManager != null) {
             voteManager.startVoting();
@@ -240,6 +275,9 @@ public class RoundManager {
             voteManager.concludeVoting();
         }
         checkWinConditions();
+        if (currentPhase == RoundPhase.PRE_ROUND) {
+            return;
+        }
         setPhase(RoundPhase.ROUND_END, 5);
     }
 
@@ -254,14 +292,20 @@ public class RoundManager {
     }
 
     public boolean handleMarkTokenUse(Player maniac, Player target) {
-        if (markTokenUsedThisRound || maniac == null || target == null) {
+        if (maniac == null || target == null) {
             return false;
         }
         if (!roleManager.isManiac(maniac)) {
             return false;
         }
-        markTokenUsedThisRound = true;
-        markedPlayerThisRound = target.getUniqueId();
+
+        RoundMarkState state = roundMarkStates.computeIfAbsent(maniac.getUniqueId(), id -> new RoundMarkState());
+        if (state.usedMarkToken) {
+            return false;
+        }
+
+        state.usedMarkToken = true;
+        state.markedPlayer = target.getUniqueId();
 
         markManager.addNormalMark(target, 1);
         markManager.addMarkedEntity(target);
@@ -298,12 +342,44 @@ public class RoundManager {
         return true;
     }
 
+    private void announceRoles() {
+        for (Player player : getAlivePlayers()) {
+            Role role = roleManager.getRole(player);
+            if (role == Role.MANIAC) {
+                player.sendMessage(Component.text("You are the Maniac. Use your mark once each round and wield the killer sign to outsmart others.", NamedTextColor.RED));
+            } else {
+                player.sendMessage(Component.text("You are an innocent. Communicate with others and complete tasks to survive.", NamedTextColor.GREEN));
+            }
+        }
+    }
+
     private void giveMarkTokens() {
         for (Player player : getAlivePlayers()) {
             if (roleManager.isManiac(player)) {
                 markTokenManager.giveToken(player);
             } else {
                 markTokenManager.removeTokens(player);
+            }
+        }
+    }
+
+    private void giveKillerSigns() {
+        if (killerSignItem == null) {
+            return;
+        }
+        for (Player player : getAlivePlayers()) {
+            if (!roleManager.isManiac(player)) {
+                continue;
+            }
+            boolean hasSign = false;
+            for (ItemStack stack : player.getInventory().getContents()) {
+                if (killerSignItem.isKillerSign(stack)) {
+                    hasSign = true;
+                    break;
+                }
+            }
+            if (!hasSign) {
+                player.getInventory().addItem(killerSignItem.createItem());
             }
         }
     }
@@ -413,29 +489,68 @@ public class RoundManager {
     }
 
     private void resetRoundMarkState() {
-        markTokenUsedThisRound = false;
-        markedPlayerThisRound = null;
+        roundMarkStates.clear();
     }
 
-    private void executeMarkedPlayer() {
-        if (markedPlayerThisRound == null) {
-            return;
-        }
-        UUID targetId = markedPlayerThisRound;
-        markedPlayerThisRound = null;
-
-        Player target = Bukkit.getPlayer(targetId);
-        if (target == null || target.getGameMode() == GameMode.SPECTATOR || target.isDead()) {
+    private void executeMarkedPlayers() {
+        List<Player> targets = getMarkedPlayersThisRound();
+        if (targets.isEmpty()) {
             return;
         }
 
+        for (Player target : targets) {
+            if (target.getGameMode() == GameMode.SPECTATOR || target.isDead()) {
+                continue;
+            }
+            eliminateMarkedPlayer(target);
+        }
+        clearMarkedTargets();
+        onPlayerDeathOrLeave();
+    }
+
+    private void eliminateMarkedPlayer(Player target) {
         removeDisguise(target);
         target.setHealth(0.0);
         target.setGameMode(GameMode.SPECTATOR);
         markManager.clearAllMarks(target);
         markManager.removeMarkedEntity(target);
         Bukkit.broadcast(Component.text(target.getName() + " succumbed to the Maniac's mark!", NamedTextColor.RED));
-        onPlayerDeathOrLeave();
+    }
+
+    public List<Player> getMarkedPlayersThisRound() {
+        return roundMarkStates.values().stream()
+                .map(state -> state.markedPlayer)
+                .filter(Objects::nonNull)
+                .distinct()
+                .map(Bukkit::getPlayer)
+                .filter(Objects::nonNull)
+                .filter(player -> player.getGameMode() != GameMode.SPECTATOR)
+                .filter(player -> !player.isDead())
+                .collect(Collectors.toList());
+    }
+
+    private void clearMarkedTargets() {
+        roundMarkStates.values().forEach(state -> state.markedPlayer = null);
+    }
+
+    private void cleanupMarkTargets() {
+        for (UUID maniacId : new ArrayList<>(roundMarkStates.keySet())) {
+            RoundMarkState state = roundMarkStates.get(maniacId);
+            Player maniac = Bukkit.getPlayer(maniacId);
+            if (maniac == null || maniac.isDead() || maniac.getGameMode() == GameMode.SPECTATOR) {
+                roundMarkStates.remove(maniacId);
+                continue;
+            }
+            if (state != null && state.markedPlayer != null) {
+                Player marked = Bukkit.getPlayer(state.markedPlayer);
+                if (marked == null || marked.isDead() || marked.getGameMode() == GameMode.SPECTATOR) {
+                    if (marked != null) {
+                        markManager.removeMarkedEntity(marked);
+                    }
+                    state.markedPlayer = null;
+                }
+            }
+        }
     }
 
     private void saveAndClearInventories() {

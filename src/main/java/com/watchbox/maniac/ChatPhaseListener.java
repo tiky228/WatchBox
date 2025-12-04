@@ -22,9 +22,9 @@ public class ChatPhaseListener implements Listener {
         }
 
         RoundPhase phase = roundManager.getCurrentPhase();
-        if (phase == RoundPhase.ACTION || phase == RoundPhase.ROUND_START) {
+        if (phase == RoundPhase.ACTION) {
             event.setCancelled(true);
-            player.sendMessage(Component.text("Chat is disabled during the action phase.", NamedTextColor.RED));
+            player.sendMessage(Component.text("You cannot chat during the action phase.", NamedTextColor.RED));
         }
     }
 }

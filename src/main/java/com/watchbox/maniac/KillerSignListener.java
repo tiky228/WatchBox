@@ -21,22 +21,17 @@ import org.bukkit.plugin.java.JavaPlugin;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 /**
  * Handles right-click interactions with the Killer Sign and provides the Maniac ability UI.
  */
 public class KillerSignListener implements Listener {
     private final RoleManager roleManager;
-    private final MarkManager markManager;
-    private final ManiacGlowHelper glowHelper;
     private final NamespacedKey killerSignKey;
     private final RoundManager roundManager;
 
-    public KillerSignListener(JavaPlugin plugin, RoleManager roleManager, MarkManager markManager, ManiacGlowHelper glowHelper, RoundManager roundManager) {
+    public KillerSignListener(JavaPlugin plugin, RoleManager roleManager, RoundManager roundManager) {
         this.roleManager = roleManager;
-        this.markManager = markManager;
-        this.glowHelper = glowHelper;
         this.roundManager = roundManager;
         this.killerSignKey = new NamespacedKey(plugin, "killer_sign");
     }
@@ -84,8 +79,6 @@ public class KillerSignListener implements Listener {
         player.sendMessage(Component.text("Killer Abilities", NamedTextColor.DARK_RED));
         player.sendMessage(Component.text("[Silence player]", NamedTextColor.RED)
                 .clickEvent(ClickEvent.runCommand("/maniac silence")));
-        player.sendMessage(Component.text("[Show marked players]", NamedTextColor.AQUA)
-                .clickEvent(ClickEvent.runCommand("/maniac showmarks")));
         player.sendMessage(Component.text("[Swap places with player]", NamedTextColor.GREEN)
                 .clickEvent(ClickEvent.runCommand("/maniac swap")));
     }
@@ -118,23 +111,6 @@ public class KillerSignListener implements Listener {
                     .append(Component.text("[SWAP]", NamedTextColor.AQUA)
                             .clickEvent(ClickEvent.runCommand("/maniac swap " + target.getName()))));
         }
-    }
-
-    public void sendMarked(Player player) {
-        List<Player> onlineMarked = roundManager != null
-                ? new ArrayList<>(roundManager.getMarkedPlayersThisRound())
-                : markManager.getMarkedEntities().stream()
-                .filter(entity -> entity instanceof Player)
-                .map(entity -> (Player) entity)
-                .collect(Collectors.toList());
-
-        if (onlineMarked.isEmpty()) {
-            player.sendMessage(Component.text("No marked players online.", NamedTextColor.GRAY));
-            return;
-        }
-
-        player.sendMessage(Component.text("Highlighting marked players...", NamedTextColor.AQUA));
-        glowHelper.showMarkedGlow(player, onlineMarked, 60);
     }
 
     private List<Player> getAlivePlayers(UUID exclude) {

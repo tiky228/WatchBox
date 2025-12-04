@@ -6,7 +6,6 @@ import net.kyori.adventure.text.event.ClickEvent;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.Bukkit;
-import org.bukkit.GameMode;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.entity.Player;
@@ -81,8 +80,7 @@ public class DebugBookFactory {
     private List<Component> buildPages() {
         List<Component> pages = new ArrayList<>();
         pages.add(buildPlayersPage());
-        pages.add(buildManipulationPage());
-        pages.add(buildMatchInfoPage());
+        pages.add(buildPlayerManipulationLauncher());
         return pages;
     }
 
@@ -96,62 +94,12 @@ public class DebugBookFactory {
         return joinLines(lines);
     }
 
-    private Component buildManipulationPage() {
+    private Component buildPlayerManipulationLauncher() {
         List<Component> lines = new ArrayList<>();
-        lines.add(Component.text("Player Controls", NamedTextColor.GOLD));
-        lines.add(Component.text("Click an action to affect a player.", NamedTextColor.GRAY));
+        lines.add(Component.text("PlayerManipulation", NamedTextColor.GOLD));
         lines.add(Component.empty());
-
-        List<Player> players = new ArrayList<>(Bukkit.getOnlinePlayers());
-        players.sort(Comparator.comparing(Player::getName, String.CASE_INSENSITIVE_ORDER));
-
-        if (players.isEmpty()) {
-            lines.add(Component.text("No players online.", NamedTextColor.GRAY));
-        }
-
-        for (Player player : players) {
-            String name = player.getName();
-            Component line = Component.text(name, NamedTextColor.GRAY)
-                    .append(Component.space())
-                    .append(manipulationButton("KILL", NamedTextColor.RED, "/maniac debug kill " + name))
-                    .append(Component.space())
-                    .append(manipulationButton("REVIVE", NamedTextColor.GREEN, "/maniac debug revive " + name))
-                    .append(Component.space())
-                    .append(manipulationButton("SET MANIAC", NamedTextColor.DARK_RED, "/maniac debug setrole maniac " + name))
-                    .append(Component.space())
-                    .append(manipulationButton("SET CIVILIAN", NamedTextColor.AQUA, "/maniac debug setrole civilian " + name));
-            lines.add(line);
-        }
-
-        return joinLines(lines);
-    }
-
-    private Component buildMatchInfoPage() {
-        List<Component> lines = new ArrayList<>();
-        lines.add(Component.text("Match Info", NamedTextColor.BLUE));
-        lines.add(buildMatchInfoLine());
-
-        List<Player> maniacs = roundManager.getAlivePlayers().stream()
-                .filter(roleManager::isManiac)
-                .map(player -> (Player) player)
-                .collect(Collectors.toList());
-        List<Player> innocents = roundManager.getAlivePlayers().stream()
-                .filter(player -> !roleManager.isManiac(player))
-                .map(player -> (Player) player)
-                .collect(Collectors.toList());
-        List<Player> spectators = Bukkit.getOnlinePlayers().stream()
-                .filter(player -> player.getGameMode() == GameMode.SPECTATOR || player.isDead())
-                .map(player -> (Player) player)
-                .collect(Collectors.toList());
-
-        lines.add(Component.text("Maniacs: ", NamedTextColor.RED).append(listNames(maniacs, NamedTextColor.RED)));
-        lines.add(Component.text("Innocents: ", NamedTextColor.GREEN).append(listNames(innocents, NamedTextColor.GREEN)));
-        lines.add(Component.text("Spectators: ", NamedTextColor.DARK_GRAY).append(listNames(spectators, NamedTextColor.DARK_GRAY)));
-
-        List<Player> marked = roundManager.getMarkedPlayersThisRound();
-        lines.add(Component.text("Marked this round: ", NamedTextColor.YELLOW)
-                .append(marked.isEmpty() ? Component.text("None", NamedTextColor.GRAY) : listNames(marked, NamedTextColor.YELLOW)));
-
+        lines.add(Component.text("[OpenPlayerList]", NamedTextColor.AQUA, TextDecoration.BOLD)
+                .clickEvent(ClickEvent.runCommand("/maniac debug players")));
         return joinLines(lines);
     }
 
@@ -189,37 +137,23 @@ public class DebugBookFactory {
         List<Player> players = new ArrayList<>(Bukkit.getOnlinePlayers());
         players.sort(Comparator.comparing(Player::getName, String.CASE_INSENSITIVE_ORDER));
 
-        viewer.sendMessage(Component.text("Players debug", NamedTextColor.DARK_AQUA));
+        viewer.sendMessage(Component.text("PlayerManipulation", NamedTextColor.DARK_AQUA));
         if (players.isEmpty()) {
             viewer.sendMessage(Component.text("No players online.", NamedTextColor.GRAY));
             return;
         }
 
-        Set<UUID> markedThisRound = roundManager.getMarkedPlayersThisRound().stream()
-                .map(Player::getUniqueId)
-                .collect(Collectors.toSet());
-
         for (Player target : players) {
-            Role role = roleManager.getRole(target);
-            NamedTextColor roleColor = role == Role.MANIAC ? NamedTextColor.RED : NamedTextColor.GREEN;
-            Component status = (target.getGameMode() == GameMode.SPECTATOR || target.isDead())
-                    ? Component.text("DEAD", NamedTextColor.DARK_GRAY)
-                    : Component.text("ALIVE", NamedTextColor.GREEN);
-            int normalMarks = markManager.getNormalMarks(target);
-            int empoweredMarks = markManager.getEmpoweredMarks(target);
-            boolean marked = markedThisRound.contains(target.getUniqueId());
-
-            Component line = Component.text(target.getName(), roleColor)
-                    .append(Component.text(" (", NamedTextColor.GRAY))
-                    .append(Component.text(role.name(), roleColor))
-                    .append(Component.text(") ", NamedTextColor.GRAY))
-                    .append(status)
-                    .append(Component.text(" | marks: " + normalMarks + "/" + empoweredMarks, NamedTextColor.GOLD));
-
-            if (marked) {
-                line = line.append(Component.text(" [MARKED]", NamedTextColor.YELLOW));
-            }
-
+            String name = target.getName();
+            Component line = Component.text(name, NamedTextColor.GRAY)
+                    .append(Component.space())
+                    .append(manipulationButton("KILL", NamedTextColor.RED, "/maniac debug kill " + name))
+                    .append(Component.space())
+                    .append(manipulationButton("REVIVE", NamedTextColor.GREEN, "/maniac debug revive " + name))
+                    .append(Component.space())
+                    .append(manipulationButton("SET MANIAC", NamedTextColor.DARK_RED, "/maniac debug setrole maniac " + name))
+                    .append(Component.space())
+                    .append(manipulationButton("SET CIVILIAN", NamedTextColor.AQUA, "/maniac debug setrole civilian " + name));
             viewer.sendMessage(line);
         }
     }
@@ -238,15 +172,6 @@ public class DebugBookFactory {
         String id = UUID.randomUUID().toString();
         DEBUG_ACTIONS.put(id, action);
         return id;
-    }
-
-    private Component listNames(List<Player> players, NamedTextColor color) {
-        if (players.isEmpty()) {
-            return Component.text("None", NamedTextColor.GRAY);
-        }
-        return Component.join(JoinConfiguration.commas(true), players.stream()
-                .map(player -> Component.text(player.getName(), color))
-                .toList());
     }
 
     private Component joinLines(List<Component> lines) {

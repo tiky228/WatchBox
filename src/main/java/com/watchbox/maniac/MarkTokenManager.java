@@ -137,7 +137,6 @@ public class MarkTokenManager implements Listener {
 
         // Fallback if the round manager is unavailable; behaves like the old implementation.
         markManager.addNormalMark(target, 1);
-        player.sendMessage(Component.text("Marked " + target.getName() + ".", NamedTextColor.GREEN));
     }
 
     private void registerEquipmentListener() {

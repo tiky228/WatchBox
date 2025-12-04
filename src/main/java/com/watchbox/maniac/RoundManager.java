@@ -245,19 +245,15 @@ public class RoundManager {
     }
 
     private void enterDiscussionPhase() {
-        executeMarkedPlayers();
-        WinnerType winner = checkGameEnd();
-        if (winner != null) {
-            return;
-        }
-        resolveMarks();
-        if (currentPhase == RoundPhase.PRE_ROUND) {
-            return;
-        }
         cancelDisguises();
         clearHiddenNameTeam();
         saveAndClearInventories();
         setPhase(RoundPhase.DISCUSSION, discussionPhaseDuration);
+        executeMarkedPlayers();
+        if (currentPhase == RoundPhase.PRE_ROUND) {
+            return;
+        }
+        resolveMarks();
     }
 
     private void enterVotingPhase() {
@@ -310,9 +306,6 @@ public class RoundManager {
         markManager.addNormalMark(target, 1);
         markManager.addMarkedEntity(target);
         markTokenManager.removeTokens(maniac);
-
-        maniac.sendMessage(Component.text("Marked " + target.getName() + ".", NamedTextColor.GREEN));
-        target.sendMessage(Component.text("You have been marked by the Maniac!", NamedTextColor.RED));
         return true;
     }
 
@@ -346,9 +339,9 @@ public class RoundManager {
         for (Player player : getAlivePlayers()) {
             Role role = roleManager.getRole(player);
             if (role == Role.MANIAC) {
-                player.sendMessage(Component.text("You are the Maniac. Use your mark once each round and wield the killer sign to outsmart others.", NamedTextColor.RED));
+                player.sendMessage(Component.text("You are the Maniac. You can place one maniac mark each round and carry a killer sign to eliminate others.", NamedTextColor.RED));
             } else {
-                player.sendMessage(Component.text("You are an innocent. Communicate with others and complete tasks to survive.", NamedTextColor.GREEN));
+                player.sendMessage(Component.text("You are an innocent. Talk with other players and complete tasks to survive.", NamedTextColor.GREEN));
             }
         }
     }

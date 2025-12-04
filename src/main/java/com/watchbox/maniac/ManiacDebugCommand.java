@@ -48,6 +48,7 @@ public class ManiacDebugCommand implements CommandExecutor {
                 sender.sendMessage(Component.text("Advanced to next phase.", NamedTextColor.GREEN));
             }
             case "manip", "manipulation" -> handleManipulation(sender);
+            case "players" -> handlePlayers(sender);
             case "phase" -> handlePhaseCommand(sender, label, args);
             case "time" -> handleTimeCommand(sender, args);
             default -> sender.sendMessage(Component.text("That debug action is no longer available.", NamedTextColor.RED));
@@ -100,7 +101,7 @@ public class ManiacDebugCommand implements CommandExecutor {
     }
 
     private void sendUsage(CommandSender sender, String label) {
-        sender.sendMessage(Component.text("Usage: /" + label + " start|stop|nextphase|manip|phase [phase] [seconds]|time <seconds>", NamedTextColor.DARK_AQUA));
+        sender.sendMessage(Component.text("Usage: /" + label + " start|stop|nextphase|manip|players|phase [phase] [seconds]|time <seconds>", NamedTextColor.DARK_AQUA));
     }
 
     private boolean tryExecuteDebugAction(CommandSender sender, String id) {
@@ -122,7 +123,7 @@ public class ManiacDebugCommand implements CommandExecutor {
 
     private boolean isKnownSubCommand(String id) {
         return switch (id.toLowerCase()) {
-            case "start", "stop", "nextphase", "phase", "time", "manip", "manipulation" -> true;
+            case "start", "stop", "nextphase", "phase", "time", "manip", "manipulation", "players" -> true;
             default -> false;
         };
     }
@@ -137,5 +138,17 @@ public class ManiacDebugCommand implements CommandExecutor {
             return;
         }
         debugBookFactory.sendManipulationInfo(player);
+    }
+
+    private void handlePlayers(CommandSender sender) {
+        if (!(sender instanceof Player player)) {
+            sender.sendMessage(Component.text("Players only.", NamedTextColor.RED));
+            return;
+        }
+        if (debugBookFactory == null) {
+            sender.sendMessage(Component.text("Player debug details are unavailable.", NamedTextColor.RED));
+            return;
+        }
+        debugBookFactory.sendPlayersDebugInfo(player);
     }
 }

@@ -114,13 +114,16 @@ public class DebugBookFactory {
 
         List<Player> maniacs = roundManager.getAlivePlayers().stream()
                 .filter(roleManager::isManiac)
-                .toList();
+                .map(player -> (Player) player)
+                .collect(Collectors.toList());
         List<Player> innocents = roundManager.getAlivePlayers().stream()
                 .filter(player -> !roleManager.isManiac(player))
-                .toList();
+                .map(player -> (Player) player)
+                .collect(Collectors.toList());
         List<Player> spectators = Bukkit.getOnlinePlayers().stream()
                 .filter(player -> player.getGameMode() == GameMode.SPECTATOR || player.isDead())
-                .toList();
+                .map(player -> (Player) player)
+                .collect(Collectors.toList());
 
         lines.add(Component.text("Maniacs: ", NamedTextColor.RED).append(listNames(maniacs, NamedTextColor.RED)));
         lines.add(Component.text("Innocents: ", NamedTextColor.GREEN).append(listNames(innocents, NamedTextColor.GREEN)));

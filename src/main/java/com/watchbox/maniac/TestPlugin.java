@@ -17,7 +17,6 @@ public class TestPlugin extends JavaPlugin {
     private VoteManager voteManager;
     private KillerSignItem killerSignItem;
     private KillerSignListener killerSignListener;
-    private ManiacGlowHelper maniacGlowHelper;
     private MarkTokenManager markTokenManager;
 
     @Override
@@ -36,9 +35,8 @@ public class TestPlugin extends JavaPlugin {
         voteManager = new VoteManager(this, roleManager, roundManager);
         roundManager.setVoteManager(voteManager);
         debugBookFactory = new DebugBookFactory(this, roundManager, roleManager, markManager);
-        maniacGlowHelper = new ManiacGlowHelper(this);
         killerSignItem = new KillerSignItem(this);
-        killerSignListener = new KillerSignListener(this, roleManager, markManager, maniacGlowHelper, roundManager);
+        killerSignListener = new KillerSignListener(this, roleManager, roundManager);
         roundManager.setKillerSignItem(killerSignItem);
 
         long silenceDuration = getConfig().getLong("signSilenceDurationTicks", 200L);
@@ -58,7 +56,7 @@ public class TestPlugin extends JavaPlugin {
             getCommand("round").setExecutor(new RoundCommand(roundManager));
         }
         if (getCommand("maniac") != null) {
-            getCommand("maniac").setExecutor(new ManiacCommand(this, roleManager, silenceManager, abilityManager, voteManager, roundManager, killerSignItem, killerSignListener, silenceDuration));
+            getCommand("maniac").setExecutor(new ManiacCommand(this, roleManager, silenceManager, abilityManager, voteManager, roundManager, killerSignItem, killerSignListener, silenceDuration, debugBookFactory));
         }
         if (getCommand("vote") != null) {
             getCommand("vote").setExecutor(new VoteCommand(voteManager));
@@ -68,7 +66,7 @@ public class TestPlugin extends JavaPlugin {
         }
 
         // Listeners
-        getServer().getPluginManager().registerEvents(new SignListener(silenceManager, logSigns), this);
+        getServer().getPluginManager().registerEvents(new SignListener(silenceManager, logSigns, roleManager, roundManager), this);
         getServer().getPluginManager().registerEvents(new TaskListener(taskManager), this);
         getServer().getPluginManager().registerEvents(new MurdererWeaponListener(this, roleManager, markManager, murdererWeapon), this);
         getServer().getPluginManager().registerEvents(killerSignListener, this);

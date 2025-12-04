@@ -26,10 +26,12 @@ public class ManiacCommand implements CommandExecutor {
     private final KillerSignListener killerSignListener;
     private final long silenceDuration;
     private final RoundManager roundManager;
+    private final DebugBookFactory debugBookFactory;
 
     public ManiacCommand(JavaPlugin plugin, RoleManager roleManager, SilenceManager silenceManager,
                          ManiacAbilityManager abilityManager, VoteManager voteManager, RoundManager roundManager,
-                         KillerSignItem killerSignItem, KillerSignListener killerSignListener, long silenceDuration) {
+                         KillerSignItem killerSignItem, KillerSignListener killerSignListener, long silenceDuration,
+                         DebugBookFactory debugBookFactory) {
         this.plugin = plugin;
         this.roleManager = roleManager;
         this.silenceManager = silenceManager;
@@ -39,12 +41,13 @@ public class ManiacCommand implements CommandExecutor {
         this.killerSignItem = killerSignItem;
         this.killerSignListener = killerSignListener;
         this.silenceDuration = silenceDuration;
+        this.debugBookFactory = debugBookFactory;
     }
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (args.length == 0) {
-            sender.sendMessage(Component.text("Usage: votebook|killersign|silence|swap|entityid|showmarks|debug", NamedTextColor.DARK_AQUA));
+            sender.sendMessage(Component.text("Usage: votebook|killersign|silence|swap|entityid|debug", NamedTextColor.DARK_AQUA));
             return true;
         }
         switch (args[0].toLowerCase()) {
@@ -56,18 +59,6 @@ public class ManiacCommand implements CommandExecutor {
                 return handleSilence(sender, args);
             case "entityid":
                 return handleEntityId(sender, args);
-            case "showmarks":
-                if (!(sender instanceof Player)) {
-                    sender.sendMessage(Component.text("Players only.", NamedTextColor.RED));
-                    return true;
-                }
-                Player marksViewer = (Player) sender;
-                if (!(marksViewer.isOp() || roleManager.isManiac(marksViewer))) {
-                    marksViewer.sendMessage(Component.text("You cannot view marks.", NamedTextColor.RED));
-                    return true;
-                }
-                killerSignListener.sendMarked(marksViewer);
-                return true;
             case "swap":
                 return handleSwap(sender, args);
             case "debug":
@@ -173,6 +164,10 @@ public class ManiacCommand implements CommandExecutor {
             player.sendMessage(Component.text("Target is in another world.", NamedTextColor.RED));
             return true;
         }
+        if (roleManager.isManiac(player) && roundManager.isTeleportOnCooldown(player)) {
+            player.sendMessage(Component.text("Teleport ability is on cooldown.", NamedTextColor.RED));
+            return true;
+        }
         Location playerLoc = player.getLocation().clone();
         Location targetLoc = target.getLocation().clone();
         playerLoc.setY(playerLoc.getY() + 0.1);
@@ -183,6 +178,9 @@ public class ManiacCommand implements CommandExecutor {
             player.setFallDistance(0f);
             target.setFallDistance(0f);
         });
+        if (roleManager.isManiac(player)) {
+            roundManager.markTeleportUsed(player);
+        }
         return true;
     }
 
@@ -230,14 +228,28 @@ public class ManiacCommand implements CommandExecutor {
             return true;
         }
 
-        if (args.length < 3) {
-            sender.sendMessage(Component.text("Usage: /maniac debug <kill|revive|setrole> ...", NamedTextColor.DARK_AQUA));
+        if (args.length < 2) {
+            sender.sendMessage(Component.text("Usage: /maniac debug <players|kill|revive|setrole> ...", NamedTextColor.DARK_AQUA));
             return true;
         }
 
         String action = args[1].toLowerCase();
         switch (action) {
+            case "players" -> {
+                if (!(sender instanceof Player player)) {
+                    sender.sendMessage(Component.text("Players only.", NamedTextColor.RED));
+                    return true;
+                }
+                if (debugBookFactory != null) {
+                    debugBookFactory.sendPlayersDebugInfo(player);
+                }
+                return true;
+            }
             case "kill" -> {
+                if (args.length < 3) {
+                    sender.sendMessage(Component.text("Usage: /maniac debug kill <player>", NamedTextColor.DARK_AQUA));
+                    return true;
+                }
                 Player target = Bukkit.getPlayer(args[2]);
                 if (target == null) {
                     sender.sendMessage(Component.text("Player not found.", NamedTextColor.RED));
@@ -248,6 +260,10 @@ public class ManiacCommand implements CommandExecutor {
                 return true;
             }
             case "revive" -> {
+                if (args.length < 3) {
+                    sender.sendMessage(Component.text("Usage: /maniac debug revive <player>", NamedTextColor.DARK_AQUA));
+                    return true;
+                }
                 Player target = Bukkit.getPlayer(args[2]);
                 if (target == null) {
                     sender.sendMessage(Component.text("Player not found.", NamedTextColor.RED));

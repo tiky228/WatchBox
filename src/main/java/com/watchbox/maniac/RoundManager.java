@@ -43,6 +43,7 @@ public class RoundManager {
     private final MarkTokenManager markTokenManager;
     private KillerSignItem killerSignItem;
     private VoteManager voteManager;
+    private final Map<UUID, Long> teleportCooldowns = new HashMap<>();
 
     private final Map<UUID, RoundMarkState> roundMarkStates = new HashMap<>();
 
@@ -99,6 +100,7 @@ public class RoundManager {
         cancelDisguises();
         clearHiddenNameTeam();
         clearSavedInventories();
+        resetTeleportCooldowns();
         markTokenManager.removeTokensFromAll();
         if (voteManager != null) {
             voteManager.endVoting();
@@ -134,6 +136,7 @@ public class RoundManager {
             clearSavedInventories();
         }
         skipInventoryRestore = false;
+        resetTeleportCooldowns();
         markTokenManager.removeTokensFromAll();
         roleManager.clear();
         markManager.clearAll();
@@ -491,6 +494,22 @@ public class RoundManager {
 
     private void resetRoundMarkState() {
         roundMarkStates.clear();
+    }
+
+    public boolean isTeleportOnCooldown(Player player) {
+        Long lastUse = teleportCooldowns.get(player.getUniqueId());
+        if (lastUse == null) {
+            return false;
+        }
+        return System.currentTimeMillis() - lastUse < 60_000L;
+    }
+
+    public void markTeleportUsed(Player player) {
+        teleportCooldowns.put(player.getUniqueId(), System.currentTimeMillis());
+    }
+
+    private void resetTeleportCooldowns() {
+        teleportCooldowns.clear();
     }
 
     private void eliminateMarkedPlayersAtDiscussion() {

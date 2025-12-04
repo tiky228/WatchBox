@@ -35,6 +35,7 @@ public class MarkTokenManager implements Listener {
     private final MarkManager markManager;
     private final NamespacedKey tokenKey;
     private final ProtocolManager protocolManager;
+    private RoundManager roundManager;
 
     public MarkTokenManager(JavaPlugin plugin, RoleManager roleManager, MarkManager markManager) {
         this.plugin = plugin;
@@ -43,6 +44,10 @@ public class MarkTokenManager implements Listener {
         this.tokenKey = new NamespacedKey(plugin, "mark_token");
         this.protocolManager = ProtocolLibrary.getProtocolManager();
         registerEquipmentListener();
+    }
+
+    public void setRoundManager(RoundManager roundManager) {
+        this.roundManager = roundManager;
     }
 
     public ItemStack createToken() {
@@ -123,7 +128,14 @@ public class MarkTokenManager implements Listener {
         if (target.getGameMode() == GameMode.SPECTATOR || target.isDead()) {
             return;
         }
+        if (roundManager != null) {
+            if (!roundManager.handleMarkTokenUse(player, target)) {
+                player.sendMessage(Component.text("You cannot use another mark this round.", NamedTextColor.RED));
+            }
+            return;
+        }
 
+        // Fallback if the round manager is unavailable; behaves like the old implementation.
         markManager.addNormalMark(target, 1);
         player.sendMessage(Component.text("Marked " + target.getName() + ".", NamedTextColor.GREEN));
     }

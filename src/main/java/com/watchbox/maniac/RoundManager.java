@@ -55,6 +55,8 @@ public class RoundManager {
     private Team hiddenTeam;
     private final Map<UUID, ItemStack[]> savedInventories = new HashMap<>();
     private final Map<UUID, ItemStack[]> savedArmor = new HashMap<>();
+    private boolean markTokenUsedThisRound = false;
+    private UUID markedPlayerThisRound;
 
     public RoundManager(JavaPlugin plugin, RoleManager roleManager, MarkManager markManager, TaskManager taskManager, MarkTokenManager markTokenManager) {
         this.plugin = plugin;
@@ -88,6 +90,7 @@ public class RoundManager {
         roleManager.clear();
         markManager.clearAll();
         taskManager.resetLanterns();
+        resetRoundMarkState();
 
         prepareParticipants();
         if (assignRoles()) {
@@ -111,6 +114,7 @@ public class RoundManager {
         markTokenManager.removeTokensFromAll();
         roleManager.clear();
         markManager.clearAll();
+        resetRoundMarkState();
         currentPhase = RoundPhase.PRE_ROUND;
     }
 
@@ -132,13 +136,19 @@ public class RoundManager {
 
     public void onPlayerDeathOrLeave() {
         cleanupDisguisesForInactivePlayers();
+        if (markedPlayerThisRound != null) {
+            Player target = Bukkit.getPlayer(markedPlayerThisRound);
+            if (target == null || target.isDead() || target.getGameMode() == GameMode.SPECTATOR) {
+                markedPlayerThisRound = null;
+            }
+        }
         checkWinConditions();
     }
 
     public void checkWinConditions() {
         List<Player> alivePlayers = getAlivePlayers();
         long maniacsAlive = alivePlayers.stream().filter(roleManager::isManiac).count();
-        long nonManiacsAlive = alivePlayers.stream().filter(player -> !roleManager.isManiac(player)).count();
+        long innocentsAlive = alivePlayers.stream().filter(player -> !roleManager.isManiac(player)).count();
 
         if (maniacsAlive <= 0) {
             Bukkit.broadcast(Component.text("Innocents win!", NamedTextColor.AQUA));
@@ -146,7 +156,7 @@ public class RoundManager {
             return;
         }
 
-        if (maniacsAlive == 1 && nonManiacsAlive == 1) {
+        if (innocentsAlive <= maniacsAlive) {
             Bukkit.broadcast(Component.text("The Maniac wins!", NamedTextColor.RED));
             endRound();
         }
@@ -198,6 +208,7 @@ public class RoundManager {
     }
 
     private void enterActionPhase() {
+        resetRoundMarkState();
         restoreInventories();
         giveMarkTokens();
         applyDisguises();
@@ -216,6 +227,7 @@ public class RoundManager {
     private void enterVotingPhase() {
         cancelDisguises();
         clearHiddenNameTeam();
+        executeMarkedPlayer();
         clearInventoriesForAlivePlayers();
         if (voteManager != null) {
             voteManager.startVoting();
@@ -239,6 +251,25 @@ public class RoundManager {
             }
         }
         checkWinConditions();
+    }
+
+    public boolean handleMarkTokenUse(Player maniac, Player target) {
+        if (markTokenUsedThisRound || maniac == null || target == null) {
+            return false;
+        }
+        if (!roleManager.isManiac(maniac)) {
+            return false;
+        }
+        markTokenUsedThisRound = true;
+        markedPlayerThisRound = target.getUniqueId();
+
+        markManager.addNormalMark(target, 1);
+        markManager.addMarkedEntity(target);
+        markTokenManager.removeTokens(maniac);
+
+        maniac.sendMessage(Component.text("Marked " + target.getName() + ".", NamedTextColor.GREEN));
+        target.sendMessage(Component.text("You have been marked by the Maniac!", NamedTextColor.RED));
+        return true;
     }
 
     private void prepareParticipants() {
@@ -379,6 +410,32 @@ public class RoundManager {
             timerTask.cancel();
             timerTask = null;
         }
+    }
+
+    private void resetRoundMarkState() {
+        markTokenUsedThisRound = false;
+        markedPlayerThisRound = null;
+    }
+
+    private void executeMarkedPlayer() {
+        if (markedPlayerThisRound == null) {
+            return;
+        }
+        UUID targetId = markedPlayerThisRound;
+        markedPlayerThisRound = null;
+
+        Player target = Bukkit.getPlayer(targetId);
+        if (target == null || target.getGameMode() == GameMode.SPECTATOR || target.isDead()) {
+            return;
+        }
+
+        removeDisguise(target);
+        target.setHealth(0.0);
+        target.setGameMode(GameMode.SPECTATOR);
+        markManager.clearAllMarks(target);
+        markManager.removeMarkedEntity(target);
+        Bukkit.broadcast(Component.text(target.getName() + " succumbed to the Maniac's mark!", NamedTextColor.RED));
+        onPlayerDeathOrLeave();
     }
 
     private void saveAndClearInventories() {

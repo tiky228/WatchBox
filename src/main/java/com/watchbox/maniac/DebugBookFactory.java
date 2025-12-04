@@ -1,7 +1,7 @@
 package com.watchbox.maniac;
 
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.TextComponent;
+import net.kyori.adventure.text.JoinConfiguration;
 import net.kyori.adventure.text.event.ClickEvent;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Bukkit;
@@ -26,7 +26,6 @@ import java.util.function.Consumer;
  * Generates a debug control book with live state and command shortcuts.
  */
 public class DebugBookFactory {
-    private static final int LINES_PER_PAGE = 11;
     public static final Map<String, Consumer<Player>> DEBUG_ACTIONS = new ConcurrentHashMap<>();
 
     private final NamespacedKey debugKey;
@@ -76,25 +75,30 @@ public class DebugBookFactory {
     }
 
     private List<Component> buildPages() {
-        BookPageBuilder builder = new BookPageBuilder(LINES_PER_PAGE);
-        builder.addHeading("Players & Roles", NamedTextColor.DARK_AQUA);
+        List<Component> pages = new ArrayList<>();
+        pages.add(buildPlayersPage());
+        pages.add(buildManipulationPage());
+        pages.add(buildMatchInfoPage());
+        return pages;
+    }
+
+    private Component buildPlayersPage() {
+        List<Component> lines = new ArrayList<>();
+        lines.add(Component.text("Players & Roles", NamedTextColor.DARK_AQUA));
 
         List<Player> players = new ArrayList<>(Bukkit.getOnlinePlayers());
         if (players.isEmpty()) {
-            builder.addLine(Component.text("No players online.", NamedTextColor.GRAY));
+            lines.add(Component.text("No players online.", NamedTextColor.GRAY));
         } else {
+            players.sort(java.util.Comparator.comparing(Player::getName));
             for (Player player : players) {
-                builder.addLine(buildPlayerLine(player));
+                lines.add(buildPlayerLine(player));
             }
         }
 
-        builder.addBlankLine();
-        builder.addHeading("Match Info", NamedTextColor.BLUE);
-        builder.addLine(button("Show alive counts", NamedTextColor.AQUA, this::sendMatchInfo));
-
-        builder.addBlankLine();
-        builder.addHeading("Round Control", NamedTextColor.BLUE);
-        builder.addLine(Component.text()
+        lines.add(Component.empty());
+        lines.add(Component.text("Round Control", NamedTextColor.BLUE));
+        lines.add(Component.text()
                 .append(button("Start Round", NamedTextColor.GREEN, p -> roundManager.startRound()))
                 .append(Component.space())
                 .append(button("Next Phase", NamedTextColor.AQUA, p -> roundManager.advancePhase()))
@@ -102,26 +106,52 @@ public class DebugBookFactory {
                 .append(button("End Round", NamedTextColor.RED, p -> roundManager.endRound()))
                 .build());
 
-        builder.addBlankLine();
-        builder.addHeading("Marks Tools", NamedTextColor.GREEN);
-        builder.addLine(button("List marked players", NamedTextColor.AQUA, this::listMarkedPlayers));
-        builder.addLine(button("Clear all marks", NamedTextColor.RED, viewer -> {
+        lines.add(Component.empty());
+        lines.add(Component.text("Marks Tools", NamedTextColor.GREEN));
+        lines.add(button("List marked players", NamedTextColor.AQUA, this::listMarkedPlayers));
+        lines.add(button("Clear all marks", NamedTextColor.RED, viewer -> {
             markManager.clearAll();
             viewer.sendMessage(Component.text("All marks cleared.", NamedTextColor.RED));
         }));
 
-        // Provide a dedicated page that lists nicknames to ensure they are visible in-game.
-        builder.newPage();
-        builder.addHeading("Nicknames", NamedTextColor.GOLD);
-        if (players.isEmpty()) {
-            builder.addLine(Component.text("No players online.", NamedTextColor.GRAY));
-        } else {
-            for (Player player : players) {
-                builder.addLine(Component.text(player.getName(), NamedTextColor.GRAY));
-            }
-        }
+        return joinLines(lines);
+    }
 
-        return builder.build();
+    private Component buildManipulationPage() {
+        List<Component> lines = new ArrayList<>();
+        lines.add(Component.text("Manipulation", NamedTextColor.GOLD));
+        lines.add(Component.text("Click the button below to close the book and print live manipulation info to chat.", NamedTextColor.GRAY));
+        lines.add(Component.empty());
+        lines.add(Component.text("[Open manipulation commands]", NamedTextColor.AQUA)
+                .clickEvent(ClickEvent.runCommand("/maniacdebug manip")));
+        lines.add(Component.text("The chat output always uses the latest game state.", NamedTextColor.DARK_GRAY));
+        return joinLines(lines);
+    }
+
+    private Component buildMatchInfoPage() {
+        List<Component> lines = new ArrayList<>();
+        lines.add(Component.text("Match Info", NamedTextColor.BLUE));
+        lines.add(buildMatchInfoLine());
+
+        List<Player> maniacs = roundManager.getAlivePlayers().stream()
+                .filter(roleManager::isManiac)
+                .toList();
+        List<Player> innocents = roundManager.getAlivePlayers().stream()
+                .filter(player -> !roleManager.isManiac(player))
+                .toList();
+        List<Player> spectators = Bukkit.getOnlinePlayers().stream()
+                .filter(player -> player.getGameMode() == GameMode.SPECTATOR || player.isDead())
+                .toList();
+
+        lines.add(Component.text("Maniacs: ", NamedTextColor.RED).append(listNames(maniacs, NamedTextColor.RED)));
+        lines.add(Component.text("Innocents: ", NamedTextColor.GREEN).append(listNames(innocents, NamedTextColor.GREEN)));
+        lines.add(Component.text("Spectators: ", NamedTextColor.DARK_GRAY).append(listNames(spectators, NamedTextColor.DARK_GRAY)));
+
+        List<Player> marked = roundManager.getMarkedPlayersThisRound();
+        lines.add(Component.text("Marked this round: ", NamedTextColor.YELLOW)
+                .append(marked.isEmpty() ? Component.text("None", NamedTextColor.GRAY) : listNames(marked, NamedTextColor.YELLOW)));
+
+        return joinLines(lines);
     }
 
     private Component buildPlayerLine(Player player) {
@@ -134,65 +164,73 @@ public class DebugBookFactory {
         }
 
         UUID targetId = player.getUniqueId();
-        TextComponent.Builder line = Component.text();
-        line.append(Component.text(player.getName(), nameColor)).append(Component.space());
+        Component status = player.getGameMode() == GameMode.SPECTATOR || player.isDead()
+                ? Component.text("[DEAD]", NamedTextColor.DARK_GRAY)
+                : Component.text("[ALIVE]", NamedTextColor.GREEN);
 
-        line.append(button("Maniac", NamedTextColor.RED, viewer -> {
-            Player target = Bukkit.getPlayer(targetId);
-            if (target != null) {
-                roleManager.assignRole(target, Role.MANIAC);
-                viewer.sendMessage(Component.text("Assigned MANIAC to " + target.getName(), NamedTextColor.GREEN));
-            }
-        })).append(Component.space());
+        Component base = Component.text(player.getName(), nameColor)
+                .append(Component.space())
+                .append(Component.text("(" + role.name() + ")", NamedTextColor.GRAY))
+                .append(Component.space())
+                .append(status)
+                .append(Component.newline());
 
-        line.append(button("Civilian", NamedTextColor.GREEN, viewer -> {
-            Player target = Bukkit.getPlayer(targetId);
-            if (target != null) {
-                roleManager.assignRole(target, Role.CIVILIAN);
-                viewer.sendMessage(Component.text("Assigned CIVILIAN to " + target.getName(), NamedTextColor.GREEN));
-            }
-        })).append(Component.space());
-
-        line.append(button("Clear Role", NamedTextColor.DARK_GRAY, viewer -> {
-            Player target = Bukkit.getPlayer(targetId);
-            if (target != null) {
-                roleManager.clearRole(target);
-                viewer.sendMessage(Component.text("Cleared role for " + target.getName(), NamedTextColor.GRAY));
-            }
-        })).append(Component.space());
-
-        line.append(button("Add Mark", NamedTextColor.GREEN, viewer -> {
-            Player target = Bukkit.getPlayer(targetId);
-            if (target != null) {
-                markManager.addNormalMark(target, 1);
-                viewer.sendMessage(Component.text("Added mark to " + target.getName(), NamedTextColor.GREEN));
-            }
-        })).append(Component.space());
-
-        line.append(button("Clear Marks", NamedTextColor.DARK_GRAY, viewer -> {
-            Player target = Bukkit.getPlayer(targetId);
-            if (target != null) {
-                markManager.clearAllMarks(target);
-                viewer.sendMessage(Component.text("Cleared marks for " + target.getName(), NamedTextColor.GRAY));
-            }
-        })).append(Component.space());
-
-        line.append(button("Kill", NamedTextColor.RED, viewer -> {
-            Player target = Bukkit.getPlayer(targetId);
-            if (target != null) {
-                target.setHealth(0.0);
-                target.setGameMode(GameMode.SPECTATOR);
-                roundManager.removeDisguise(target);
-                roundManager.onPlayerDeathOrLeave();
-                viewer.sendMessage(Component.text("Killed " + target.getName(), NamedTextColor.RED));
-            }
-        }));
-
-        return line.build();
+        return base.append(Component.text()
+                .append(button("Maniac", NamedTextColor.RED, viewer -> {
+                    Player target = Bukkit.getPlayer(targetId);
+                    if (target != null) {
+                        roleManager.assignRole(target, Role.MANIAC);
+                        viewer.sendMessage(Component.text("Assigned MANIAC to " + target.getName(), NamedTextColor.GREEN));
+                    }
+                }))
+                .append(Component.space())
+                .append(button("Civilian", NamedTextColor.GREEN, viewer -> {
+                    Player target = Bukkit.getPlayer(targetId);
+                    if (target != null) {
+                        roleManager.assignRole(target, Role.CIVILIAN);
+                        viewer.sendMessage(Component.text("Assigned CIVILIAN to " + target.getName(), NamedTextColor.GREEN));
+                    }
+                }))
+                .append(Component.space())
+                .append(button("Clear Role", NamedTextColor.DARK_GRAY, viewer -> {
+                    Player target = Bukkit.getPlayer(targetId);
+                    if (target != null) {
+                        roleManager.clearRole(target);
+                        viewer.sendMessage(Component.text("Cleared role for " + target.getName(), NamedTextColor.GRAY));
+                    }
+                }))
+                .append(Component.space())
+                .append(button("Add Mark", NamedTextColor.GREEN, viewer -> {
+                    Player target = Bukkit.getPlayer(targetId);
+                    if (target != null) {
+                        markManager.addNormalMark(target, 1);
+                        viewer.sendMessage(Component.text("Added mark to " + target.getName(), NamedTextColor.GREEN));
+                    }
+                }))
+                .append(Component.space())
+                .append(button("Clear Marks", NamedTextColor.DARK_GRAY, viewer -> {
+                    Player target = Bukkit.getPlayer(targetId);
+                    if (target != null) {
+                        markManager.clearAllMarks(target);
+                        viewer.sendMessage(Component.text("Cleared marks for " + target.getName(), NamedTextColor.GRAY));
+                    }
+                }))
+                .append(Component.space())
+                .append(button("Kill", NamedTextColor.RED, viewer -> {
+                    Player target = Bukkit.getPlayer(targetId);
+                    if (target != null) {
+                        target.setHealth(0.0);
+                        target.setGameMode(GameMode.SPECTATOR);
+                        roundManager.removeDisguise(target);
+                        roundManager.onPlayerDeathOrLeave();
+                        viewer.sendMessage(Component.text("Killed " + target.getName(), NamedTextColor.RED));
+                    }
+                }))
+                .build());
     }
 
-    private void sendMatchInfo(Player player) {
-        Component info = Component.text()
+    private Component buildMatchInfoLine() {
+        return Component.text()
                 .append(Component.text("Phase: ", NamedTextColor.BLUE))
                 .append(Component.text(roundManager.getCurrentPhase().name(), NamedTextColor.AQUA))
                 .append(Component.text(" | Remaining: ", NamedTextColor.BLUE))
@@ -204,7 +242,21 @@ public class DebugBookFactory {
                 .append(Component.text(" | Spectators: ", NamedTextColor.BLUE))
                 .append(Component.text(String.valueOf(roundManager.countSpectators()), NamedTextColor.DARK_GRAY))
                 .build();
-        player.sendMessage(info);
+    }
+
+    public void sendManipulationInfo(Player player) {
+        player.sendMessage(Component.text("Manipulation overview", NamedTextColor.DARK_AQUA));
+        player.sendMessage(buildMatchInfoLine());
+
+        List<Player> marked = roundManager.getMarkedPlayersThisRound();
+        if (marked.isEmpty()) {
+            player.sendMessage(Component.text("Marked players: none this round.", NamedTextColor.GRAY));
+        } else {
+            player.sendMessage(Component.text("Marked players: ", NamedTextColor.YELLOW)
+                    .append(listNames(marked, NamedTextColor.YELLOW)));
+        }
+
+        player.sendMessage(Component.text("Use /maniacdebug start|stop|nextphase or /maniac commands for deeper control.", NamedTextColor.DARK_GRAY));
     }
 
     private Component button(String text, NamedTextColor color, Consumer<Player> action) {
@@ -236,5 +288,18 @@ public class DebugBookFactory {
                     target.getName() + " - normal: " + counts.normal + ", empowered: " + counts.empowered,
                     NamedTextColor.GRAY));
         }
+    }
+
+    private Component listNames(List<Player> players, NamedTextColor color) {
+        if (players.isEmpty()) {
+            return Component.text("None", NamedTextColor.GRAY);
+        }
+        return Component.join(JoinConfiguration.commas(true), players.stream()
+                .map(player -> Component.text(player.getName(), color))
+                .toList());
+    }
+
+    private Component joinLines(List<Component> lines) {
+        return Component.join(JoinConfiguration.newlines(), lines);
     }
 }

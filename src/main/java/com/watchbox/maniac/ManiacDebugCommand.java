@@ -11,9 +11,11 @@ import java.util.function.Consumer;
 
 public class ManiacDebugCommand implements CommandExecutor {
     private final RoundManager roundManager;
+    private final DebugBookFactory debugBookFactory;
 
-    public ManiacDebugCommand(RoundManager roundManager) {
+    public ManiacDebugCommand(RoundManager roundManager, DebugBookFactory debugBookFactory) {
         this.roundManager = roundManager;
+        this.debugBookFactory = debugBookFactory;
     }
 
     @Override
@@ -45,6 +47,7 @@ public class ManiacDebugCommand implements CommandExecutor {
                 roundManager.advancePhase();
                 sender.sendMessage(Component.text("Advanced to next phase.", NamedTextColor.GREEN));
             }
+            case "manip", "manipulation" -> handleManipulation(sender);
             case "phase" -> handlePhaseCommand(sender, label, args);
             case "time" -> handleTimeCommand(sender, args);
             default -> sender.sendMessage(Component.text("That debug action is no longer available.", NamedTextColor.RED));
@@ -97,7 +100,7 @@ public class ManiacDebugCommand implements CommandExecutor {
     }
 
     private void sendUsage(CommandSender sender, String label) {
-        sender.sendMessage(Component.text("Usage: /" + label + " start|stop|nextphase|phase [phase] [seconds]|time <seconds>", NamedTextColor.DARK_AQUA));
+        sender.sendMessage(Component.text("Usage: /" + label + " start|stop|nextphase|manip|phase [phase] [seconds]|time <seconds>", NamedTextColor.DARK_AQUA));
     }
 
     private boolean tryExecuteDebugAction(CommandSender sender, String id) {
@@ -119,8 +122,20 @@ public class ManiacDebugCommand implements CommandExecutor {
 
     private boolean isKnownSubCommand(String id) {
         return switch (id.toLowerCase()) {
-            case "start", "stop", "nextphase", "phase", "time" -> true;
+            case "start", "stop", "nextphase", "phase", "time", "manip", "manipulation" -> true;
             default -> false;
         };
+    }
+
+    private void handleManipulation(CommandSender sender) {
+        if (!(sender instanceof Player player)) {
+            sender.sendMessage(Component.text("Players only.", NamedTextColor.RED));
+            return;
+        }
+        if (debugBookFactory == null) {
+            sender.sendMessage(Component.text("Manipulation details are unavailable.", NamedTextColor.RED));
+            return;
+        }
+        debugBookFactory.sendManipulationInfo(player);
     }
 }

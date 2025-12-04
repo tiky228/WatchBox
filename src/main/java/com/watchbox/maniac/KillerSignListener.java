@@ -20,10 +20,6 @@ import org.bukkit.plugin.java.JavaPlugin;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.UUID;
-import java.util.stream.Collectors;
 
 /**
  * Handles right-click interactions with the Killer Sign and provides the Maniac ability UI.
@@ -33,11 +29,13 @@ public class KillerSignListener implements Listener {
     private final MarkManager markManager;
     private final ManiacGlowHelper glowHelper;
     private final NamespacedKey killerSignKey;
+    private final RoundManager roundManager;
 
-    public KillerSignListener(JavaPlugin plugin, RoleManager roleManager, MarkManager markManager, ManiacGlowHelper glowHelper) {
+    public KillerSignListener(JavaPlugin plugin, RoleManager roleManager, MarkManager markManager, ManiacGlowHelper glowHelper, RoundManager roundManager) {
         this.roleManager = roleManager;
         this.markManager = markManager;
         this.glowHelper = glowHelper;
+        this.roundManager = roundManager;
         this.killerSignKey = new NamespacedKey(plugin, "killer_sign");
     }
 
@@ -121,15 +119,11 @@ public class KillerSignListener implements Listener {
     }
 
     public void sendMarked(Player player) {
-        Map<UUID, MarkManager.MarkCounts> marks = markManager.getAllMarks();
-        if (marks.isEmpty()) {
-            player.sendMessage(Component.text("No marked players.", NamedTextColor.GRAY));
-            return;
-        }
-
-        List<Player> onlineMarked = marks.keySet().stream()
-                .map(Bukkit::getPlayer)
-                .filter(Objects::nonNull)
+        List<Player> onlineMarked = roundManager != null
+                ? new ArrayList<>(roundManager.getMarkedPlayersThisRound())
+                : markManager.getMarkedEntities().stream()
+                .filter(entity -> entity instanceof Player)
+                .map(entity -> (Player) entity)
                 .collect(Collectors.toList());
 
         if (onlineMarked.isEmpty()) {

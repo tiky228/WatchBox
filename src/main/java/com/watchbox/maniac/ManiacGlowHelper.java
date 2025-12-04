@@ -71,17 +71,21 @@ public class ManiacGlowHelper {
             Set<Integer> allowed = viewerTargets.get(viewer.getUniqueId());
             boolean shouldSeeGlow = allowed != null && allowed.contains(entityId);
 
-            List<WrappedWatchableObject> original = event.getPacket().getWatchableCollectionModifier().read(0);
+            List<WrappedWatchableObject> original = event.getPacket().getWatchableCollectionModifier().readSafely(0);
             if (original == null) {
                 return;
             }
             List<WrappedWatchableObject> modified = new ArrayList<>(original.size());
             for (WrappedWatchableObject watchable : original) {
-                if (watchable.getIndex() == 0 && watchable.getValue() instanceof Byte current) {
-                    byte updated = shouldSeeGlow ? (byte) (current | 0x40) : (byte) (current & ~0x40);
-                    modified.add(new WrappedWatchableObject(watchable.getIndex(), updated));
-                } else {
-                    modified.add(watchable);
+                try {
+                    if (watchable.getIndex() == 0 && watchable.getValue() instanceof Byte current) {
+                        byte updated = shouldSeeGlow ? (byte) (current | 0x40) : (byte) (current & ~0x40);
+                        modified.add(new WrappedWatchableObject(watchable.getIndex(), updated));
+                    } else {
+                        modified.add(watchable);
+                    }
+                } catch (IllegalArgumentException ignored) {
+                    return;
                 }
             }
             event.getPacket().getWatchableCollectionModifier().write(0, modified);
